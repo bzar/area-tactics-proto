@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Area Tactics — Manual</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #1a1a2e;
+      color: #ddeeff;
+      font-family: sans-serif;
+      font-size: 15px;
+      line-height: 1.65;
+      padding: 40px 20px 80px;
+    }
+
+    .page {
+      max-width: 820px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      font-size: 28px;
+      color: #ffffff;
+      margin-bottom: 6px;
+      border-bottom: 2px solid #334466;
+      padding-bottom: 10px;
+    }
+
+    h2 {
+      font-size: 20px;
+      color: #88aaff;
+      margin: 36px 0 10px;
+      border-bottom: 1px solid #334466;
+      padding-bottom: 6px;
+    }
+
+    h3 {
+      font-size: 16px;
+      color: #aaccff;
+      margin: 22px 0 8px;
+    }
+
+    p {
+      margin-bottom: 10px;
+      color: #ccddf0;
+    }
+
+    ul, ol {
+      margin: 6px 0 12px 22px;
+      color: #ccddf0;
+    }
+
+    li { margin-bottom: 4px; }
+
+    strong { color: #ffffff; }
+
+    em { color: #99bbdd; font-style: italic; }
+
+    a { color: #5599ff; }
+
+    hr {
+      border: none;
+      border-top: 1px solid #334466;
+      margin: 28px 0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0 20px;
+      font-size: 14px;
+    }
+
+    thead tr { background: rgba(51, 68, 102, 0.6); }
+
+    th {
+      text-align: left;
+      padding: 8px 12px;
+      color: #aaccff;
+      font-weight: 600;
+      border-bottom: 1px solid #334466;
+    }
+
+    td {
+      padding: 7px 12px;
+      border-bottom: 1px solid rgba(51, 68, 102, 0.4);
+      color: #ccddf0;
+    }
+
+    tr:hover td { background: rgba(255,255,255,0.04); }
+
+    code {
+      background: rgba(255,255,255,0.08);
+      border-radius: 3px;
+      padding: 1px 5px;
+      font-family: monospace;
+      font-size: 13px;
+      color: #eef;
+    }
+
+    .top-bar {
+      display: flex;
+      align-items: baseline;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <h1>Area Tactics — Tester Manual</h1>
+<h2>Overview</h2>
+<p>Area Tactics is a two-player turn-based strategy game played on a hexagonal grid. Players alternate turns moving units and issuing build orders. The player who destroys all opponent units wins.</p>
+<p>The key design principle: <strong>actions taken during your turn only resolve at the start of your <em>next</em> turn</strong>. Plan ahead — everything you do now takes effect when your turn comes around again.</p>
+<hr>
+<h2>The Map</h2>
+<p>The map is a hex grid that can be panned by clicking and dragging. It contains:</p>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Symbol</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Base</strong></td>
+<td>★ (star)</td>
+<td>Starting position; anchors territory claims</td>
+</tr>
+<tr>
+<td><strong>Depot</strong></td>
+<td>▬ (rectangle)</td>
+<td>Expands unit capacity when claimed</td>
+</tr>
+<tr>
+<td><strong>Facility</strong></td>
+<td>⬡ (hexagon)</td>
+<td>Allows building new units when claimed</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>Units</h2>
+<p>Each player starts with a set of units placed near their base. Units have a <strong>type</strong> that determines all their properties.</p>
+<h3>Unit Types</h3>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Effect</th>
+<th>AoI</th>
+<th>Power</th>
+<th>Movement</th>
+<th>Energy</th>
+<th>Condition</th>
+<th>Cost</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Infantry</td>
+<td>Direct</td>
+<td>0–2</td>
+<td>4</td>
+<td>3</td>
+<td>10</td>
+<td>10</td>
+<td>1</td>
+</tr>
+<tr>
+<td>Mortar</td>
+<td>Indirect</td>
+<td>3–5</td>
+<td>10</td>
+<td>2</td>
+<td>10</td>
+<td>5</td>
+<td>2</td>
+</tr>
+<tr>
+<td>Scout</td>
+<td>Direct</td>
+<td>0–4</td>
+<td>6</td>
+<td>7</td>
+<td>20</td>
+<td>10</td>
+<td>2</td>
+</tr>
+<tr>
+<td>Convoy</td>
+<td>Support</td>
+<td>0–4</td>
+<td>0</td>
+<td>5</td>
+<td>5</td>
+<td>5</td>
+<td>1</td>
+</tr>
+</tbody></table>
+<h3>Unit Stats</h3>
+<ul>
+<li><strong>Energy</strong> — shown as a blue bar. Absorbs damage first. Regenerates by 1 each turn when not under enemy influence (or when supported — see Support below).</li>
+<li><strong>Condition</strong> — shown as a red bar. Takes damage when energy runs out. A unit with 0 condition is <strong>destroyed</strong>.</li>
+<li><strong>AoI (Area of Influence)</strong> — the range of hex-distances in which this unit affects others. AoI 0–2 means the unit influences everything from the tile it stands on out to 2 hexes away.</li>
+<li><strong>Power</strong> — how much damage this unit deals per turn to each enemy it influences.</li>
+<li><strong>Movement</strong> — how many hexes the unit can be moved during a turn (measured from where it started that turn).</li>
+<li><strong>Cost</strong> — counts against your unit capacity.</li>
+</ul>
+<h3>Effect Types</h3>
+<ul>
+<li><strong>Direct</strong> — influences (and damages) enemies in the AoI range who are within line of sight. Can claim territory.</li>
+<li><strong>Indirect</strong> — influences enemies at longer range (AoI starts at 3+). Can claim territory.</li>
+<li><strong>Support</strong> — does no damage. Extends the supply network from your base.</li>
+</ul>
+<hr>
+<h2>Taking a Turn</h2>
+<p>On your turn you can <strong>move any of your units</strong> and <strong>issue build orders</strong> at facilities. You can move units and change build orders as many times as you like before ending the turn. Only click <strong>End Turn</strong> when you are happy with your positions.</p>
+<h3>Moving Units</h3>
+<ol>
+<li><strong>Click a unit</strong> to select it. Valid destinations are highlighted in green.</li>
+<li><strong>Click a highlighted tile</strong> to move there.</li>
+<li>Click the selected unit again, or any other tile, to deselect without moving.</li>
+</ol>
+<p>A unit can be moved multiple times during a turn, but the allowed range is always measured from where it <strong>started</strong> that turn.</p>
+<h3>Ending Your Turn</h3>
+<p>Click <strong>End Turn</strong> (top-right). At that moment:</p>
+<ol>
+<li>All your units that are in range of enemy units deal damage.</li>
+<li>Your units that are <strong>not</strong> under enemy influence (or are supported) regenerate 1 energy.</li>
+<li>Any build orders you placed this turn are checked and the new unit spawns (if conditions are still met).</li>
+<li>The next player&#39;s turn begins.</li>
+</ol>
+<hr>
+<h2>Combat</h2>
+<p>Combat is automatic — you do not issue attack orders.</p>
+<p><strong>At the start of each turn</strong>, every unit damages all enemies within its AoI:</p>
+<ul>
+<li><strong>Energy drain</strong>: damage reduces enemy energy first.</li>
+<li><strong>Overflow to condition</strong>: any damage exceeding remaining energy reduces condition instead.</li>
+<li><strong>Destruction</strong>: a unit whose condition reaches 0 is removed from the map.</li>
+</ul>
+<h3>Split Damage</h3>
+<p>If a unit has <strong>multiple enemies</strong> in its AoI at the same time, its power is <strong>halved</strong> (rounded down) for each target. Spreading your units out helps avoid this.</p>
+<h3>Flanking <em>(optional feature)</em></h3>
+<p>If an enemy unit is influenced by <strong>two or more of your units from different angles</strong> (one influencing unit does not influence the other), the damage is increased by <strong>50%</strong> (rounded down).</p>
+<p>Split damage and flanking cancel each other out.</p>
+<hr>
+<h2>Territory &amp; Claiming</h2>
+<p>Your units establish a <strong>claimed territory</strong> extending outward from your base. A tile is claimed by you if:</p>
+<ol>
+<li>It contains <strong>your base</strong>, OR</li>
+<li>It is <strong>influenced by one of your units</strong> and is <strong>adjacent to a tile already claimed by you</strong>.</li>
+</ol>
+<p>Claims spread in a connected chain from your base — you cannot claim distant tiles without bridging the gap.</p>
+<h3>Claim Types</h3>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Condition</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Direct</strong></td>
+<td>At least one of your Direct or Indirect units influences the tile</td>
+</tr>
+<tr>
+<td><strong>Indirect</strong></td>
+<td>The tile is claimed only by your Support (Convoy) units</td>
+</tr>
+<tr>
+<td><strong>Unique</strong></td>
+<td>Only your units influence this tile</td>
+</tr>
+<tr>
+<td><strong>Contested</strong></td>
+<td>Both players&#39; units influence this tile</td>
+</tr>
+</tbody></table>
+<p>Claimed tiles are <strong>tinted in your team&#39;s colour</strong>. Contested tiles show a mixed colour. Indirect claims use a dotted-line indicator.</p>
+<hr>
+<h2>Unit Capacity &amp; Depots</h2>
+<p>Each player has a <strong>Unit Capacity</strong> — the maximum total unit cost you can field. Your current <strong>Unit Load</strong> is shown in the HUD (top right).</p>
+<ul>
+<li>Load can exceed capacity if you lose territory — no immediate penalty, but you cannot build new units until load drops below capacity.</li>
+</ul>
+<h3>Depots</h3>
+<p>Capturing depots expands your capacity:</p>
+<table>
+<thead>
+<tr>
+<th>Depot claim</th>
+<th>Capacity bonus</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Direct + Unique</td>
+<td><strong>+2</strong></td>
+</tr>
+<tr>
+<td>Direct + Contested</td>
+<td><strong>+1</strong></td>
+</tr>
+<tr>
+<td>Indirect or unclaimed</td>
+<td><strong>+0</strong></td>
+</tr>
+</tbody></table>
+<hr>
+<h2>Building Units</h2>
+<p>New units are built at <strong>Facility</strong> tiles (hexagon symbol). To build:</p>
+<ol>
+<li>You must have a <strong>Direct + Unique</strong> claim on the facility.</li>
+<li>The build must not cause your unit load to exceed your capacity.</li>
+<li><strong>Click the facility tile</strong> — the build menu opens.</li>
+<li>Select a unit type from the list. Unaffordable types are greyed out.</li>
+<li>Check the right panel for details and a unit portrait.</li>
+<li>Click <strong>Build</strong> to confirm, or <strong>×</strong> / click outside the panel to cancel.</li>
+</ol>
+<p>You can change or cancel a build order any number of times during your turn. A <strong>build order</strong> means the unit appears at the <strong>start of your next turn</strong>, provided:</p>
+<ul>
+<li>You still have a Direct + Unique claim on the facility, AND</li>
+<li>The facility tile is unoccupied.</li>
+</ul>
+<p>If either condition fails when your turn starts, the build order is <strong>cancelled</strong> and no unit is produced.</p>
+<p>Units under construction appear <strong>translucent</strong> on the map. They are fully built when your next turn begins.</p>
+<hr>
+<h2>Support <em>(optional feature)</em></h2>
+<p>Convoys extend a <strong>support network</strong> from your base, keeping distant units supplied.</p>
+<h3>What is Supported?</h3>
+<p>A tile is <strong>supported</strong> if it is:</p>
+<ol>
+<li>Within <strong>3 hexes</strong> of your base, OR</li>
+<li>Influenced by a <strong>Convoy unit that is itself standing on a supported tile</strong>.</li>
+</ol>
+<p>Convoys chain from one to the next, extending the supply line as far as you need.</p>
+<h3>Effect of Support</h3>
+<p>Units on supported tiles <strong>regenerate 1 energy per turn even while under enemy influence</strong>. Without support, units under enemy fire cannot regenerate.</p>
+<h3>Visualisation</h3>
+<ul>
+<li><strong>Cyan lines</strong> connect the base and convoys across the support network (thicker lines = backbone connections).</li>
+<li><strong>Thinner cyan lines</strong> connect convoys to the combat units they supply.</li>
+</ul>
+<hr>
+<h2>HUD &amp; Interface</h2>
+<table>
+<thead>
+<tr>
+<th>Element</th>
+<th>Location</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Turn indicator</strong></td>
+<td>Top right</td>
+<td>Current turn number and active player</td>
+</tr>
+<tr>
+<td><strong>Unit load</strong></td>
+<td>Top right</td>
+<td><code>Load: X / Y</code> for each player (blue = P1, red = P2)</td>
+</tr>
+<tr>
+<td><strong>End Turn</strong></td>
+<td>Top right</td>
+<td>Confirms your turn</td>
+</tr>
+<tr>
+<td><strong>Unit info box</strong></td>
+<td>Bottom right</td>
+<td>Appears when hovering a tile with a unit; shows full stats</td>
+</tr>
+<tr>
+<td><strong>Event ticker</strong></td>
+<td>Bottom bar</td>
+<td>Log of all game events in reverse-chronological order</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>Victory</h2>
+<p>A player wins when <strong>all opponent units are destroyed</strong>.</p>
+<hr>
+<h2>Quick Reference</h2>
+<table>
+<thead>
+<tr>
+<th>Action</th>
+<th>How</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Pan the map</td>
+<td>Click and drag on the map</td>
+</tr>
+<tr>
+<td>Select a unit</td>
+<td>Click it</td>
+</tr>
+<tr>
+<td>Move a unit</td>
+<td>Select it, then click a green-highlighted tile</td>
+</tr>
+<tr>
+<td>Deselect</td>
+<td>Click the selected unit again, or any non-destination tile</td>
+</tr>
+<tr>
+<td>Open build menu</td>
+<td>Click a facility you have a Direct + Unique claim on</td>
+</tr>
+<tr>
+<td>End turn</td>
+<td>Click <strong>End Turn</strong> button</td>
+</tr>
+<tr>
+<td>Start a new game</td>
+<td>Game-over screen → Back to Menu, or reload</td>
+</tr>
+</tbody></table>
+
+  </div>
+</body>
+</html>

@@ -1,0 +1,26 @@
+{
+  "name": "area-tactics-with-ai",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "vitest run",
+    "dev": "vite",
+    "build:manual": "node scripts/build-manual.js",
+    "build": "npm run build:manual && vite build"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "@types/node": "^25.3.2",
+    "marked": "^17.0.3",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.1",
+    "vitest": "^3.2.4"
+  },
+  "dependencies": {
+    "pixi.js": "^7.4.3"
+  }
+}
