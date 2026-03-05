@@ -19,7 +19,9 @@ describe("loadMap", () => {
   it("'test' map has 5 infantry per player", () => {
     const { unitPlacements } = loadMap("test");
     for (const playerId of [1, 2]) {
-      const count = unitPlacements.filter((p) => p.playerId === playerId && p.typeId === "infantry").length;
+      const count = unitPlacements.filter(
+        (p) => p.playerId === playerId && p.typeId === "infantry"
+      ).length;
       expect(count).toBe(5);
     }
   });
@@ -27,7 +29,9 @@ describe("loadMap", () => {
   it("'test' map has 5 mortars per player", () => {
     const { unitPlacements } = loadMap("test");
     for (const playerId of [1, 2]) {
-      const count = unitPlacements.filter((p) => p.playerId === playerId && p.typeId === "mortar").length;
+      const count = unitPlacements.filter(
+        (p) => p.playerId === playerId && p.typeId === "mortar"
+      ).length;
       expect(count).toBe(5);
     }
   });
@@ -35,7 +39,9 @@ describe("loadMap", () => {
   it("'test' map has 5 scouts per player", () => {
     const { unitPlacements } = loadMap("test");
     for (const playerId of [1, 2]) {
-      const count = unitPlacements.filter((p) => p.playerId === playerId && p.typeId === "scout").length;
+      const count = unitPlacements.filter(
+        (p) => p.playerId === playerId && p.typeId === "scout"
+      ).length;
       expect(count).toBe(5);
     }
   });
@@ -43,7 +49,9 @@ describe("loadMap", () => {
   it("'test' map has 5 convoys per player", () => {
     const { unitPlacements } = loadMap("test");
     for (const playerId of [1, 2]) {
-      const count = unitPlacements.filter((p) => p.playerId === playerId && p.typeId === "convoy").length;
+      const count = unitPlacements.filter(
+        (p) => p.playerId === playerId && p.typeId === "convoy"
+      ).length;
       expect(count).toBe(5);
     }
   });

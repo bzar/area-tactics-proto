@@ -164,7 +164,7 @@
 <td>0–2</td>
 <td>4</td>
 <td>3</td>
-<td>10</td>
+<td>6</td>
 <td>10</td>
 <td>1</td>
 </tr>
@@ -174,7 +174,7 @@
 <td>3–5</td>
 <td>10</td>
 <td>2</td>
-<td>10</td>
+<td>4</td>
 <td>5</td>
 <td>2</td>
 </tr>
@@ -184,8 +184,8 @@
 <td>0–4</td>
 <td>6</td>
 <td>7</td>
-<td>20</td>
 <td>10</td>
+<td>6</td>
 <td>2</td>
 </tr>
 <tr>
@@ -201,7 +201,7 @@
 </tbody></table>
 <h3>Unit Stats</h3>
 <ul>
-<li><strong>Energy</strong> — shown as a blue bar. Absorbs damage first. Regenerates by 1 each turn when not under enemy influence (or when supported — see Support below).</li>
+<li><strong>Energy</strong> — shown as a blue bar. Absorbs damage first. Regenerates each turn based on support status: +1 when not under enemy influence (base), +1 more when on a supported tile. So: unsupported and not under fire = 1, supported and under fire = 1, supported and not under fire = 2, unsupported and under fire = 0.</li>
 <li><strong>Condition</strong> — shown as a red bar. Takes damage when energy runs out. A unit with 0 condition is <strong>destroyed</strong>.</li>
 <li><strong>AoI (Area of Influence)</strong> — the range of hex-distances in which this unit affects others. AoI 0–2 means the unit influences everything from the tile it stands on out to 2 hexes away.</li>
 <li><strong>Power</strong> — how much damage this unit deals per turn to each enemy it influences.</li>
@@ -228,7 +228,7 @@
 <p>Click <strong>End Turn</strong> (top-right). At that moment:</p>
 <ol>
 <li>All your units that are in range of enemy units deal damage.</li>
-<li>Your units that are <strong>not</strong> under enemy influence (or are supported) regenerate 1 energy.</li>
+<li>Your units regenerate energy: <strong>1</strong> if not under enemy influence, <strong>+1</strong> more if on a supported tile (0 if under fire and unsupported).</li>
 <li>Any build orders you placed this turn are checked and the new unit spawns (if conditions are still met).</li>
 <li>The next player&#39;s turn begins.</li>
 </ol>
@@ -268,17 +268,18 @@
 </tr>
 <tr>
 <td><strong>Indirect</strong></td>
-<td>The tile is claimed only by your Support (Convoy) units</td>
+<td>The tile is claimed only by your Indirect units</td>
 </tr>
 <tr>
 <td><strong>Unique</strong></td>
-<td>Only your units influence this tile</td>
+<td>Only your non-Support units influence this tile</td>
 </tr>
 <tr>
 <td><strong>Contested</strong></td>
-<td>Both players&#39; units influence this tile</td>
+<td>Both players&#39; non-Support units influence this tile</td>
 </tr>
 </tbody></table>
+<p>Support (Convoy) units do claim territory (extending your coloured area along the supply chain) but do not affect claim uniqueness — an enemy convoy alone cannot contest your facility or depot.</p>
 <p>Claimed tiles are <strong>tinted in your team&#39;s colour</strong>. Contested tiles show a mixed colour. Indirect claims use a dotted-line indicator.</p>
 <hr>
 <h2>Unit Capacity &amp; Depots</h2>
@@ -337,7 +338,31 @@
 </ol>
 <p>Convoys chain from one to the next, extending the supply line as far as you need.</p>
 <h3>Effect of Support</h3>
-<p>Units on supported tiles <strong>regenerate 1 energy per turn even while under enemy influence</strong>. Without support, units under enemy fire cannot regenerate.</p>
+<p>Support grants <strong>+1 energy regeneration per turn</strong> to units on supported tiles. The effect stacks with the base regeneration:</p>
+<table>
+<thead>
+<tr>
+<th>Condition</th>
+<th>Regen per turn</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Unsupported, not under enemy fire</td>
+<td><strong>1</strong></td>
+</tr>
+<tr>
+<td>Supported, under enemy fire</td>
+<td><strong>1</strong></td>
+</tr>
+<tr>
+<td>Supported, not under enemy fire</td>
+<td><strong>2</strong></td>
+</tr>
+<tr>
+<td>Unsupported, under enemy fire</td>
+<td><strong>0</strong></td>
+</tr>
+</tbody></table>
 <h3>Visualisation</h3>
 <ul>
 <li><strong>Cyan lines</strong> connect the base and convoys across the support network (thicker lines = backbone connections).</li>
@@ -381,7 +406,9 @@
 </tbody></table>
 <hr>
 <h2>Victory</h2>
-<p>A player wins when <strong>all opponent units are destroyed</strong>.</p>
+<p>A player wins when <strong>all opponent units are destroyed</strong>, or when <strong>all of the opponent&#39;s bases are simultaneously occupied</strong> by your units at the end of a turn.</p>
+<h3>Base Capture</h3>
+<p>If <strong>all of your bases</strong> are simultaneously occupied by enemy units at the end of any turn, you lose immediately — even if you still have units on the field. Protecting your bases is as important as destroying the enemy.</p>
 <hr>
 <h2>Quick Reference</h2>
 <table>

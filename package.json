@@ -7,16 +7,26 @@
     "test": "vitest run",
     "dev": "vite",
     "build:manual": "node scripts/build-manual.js",
-    "build": "npm run build:manual && vite build"
+    "build": "npm run build:manual && vite build",
+    "lint": "eslint src",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\""
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
   "devDependencies": {
+    "@eslint/js": "^9.39.3",
     "@types/node": "^25.3.2",
+    "@vitest/eslint-plugin": "^1.6.9",
+    "eslint": "^9.39.3",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-vitest": "^0.5.4",
     "marked": "^17.0.3",
+    "prettier": "^3.8.1",
     "typescript": "^5.9.3",
+    "typescript-eslint": "^8.56.1",
     "vite": "^7.3.1",
     "vitest": "^3.2.4"
   },

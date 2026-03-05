@@ -1,4 +1,18 @@
-import { Game, Unit, UnitType, UnitId, Position, InfluenceMap, EffectType, DamageType, ClaimMap, ClaimType, TileFeature, positionsEqual, positionKey } from "./domain";
+import {
+  Game,
+  Unit,
+  UnitType,
+  UnitId,
+  Position,
+  InfluenceMap,
+  EffectType,
+  DamageType,
+  ClaimMap,
+  ClaimType,
+  TileFeature,
+  positionsEqual,
+  positionKey,
+} from "./domain";
 import { ActionEvent, GameEvent, UnitRef } from "./events";
 
 export interface GameFeatures {
@@ -24,7 +38,11 @@ export class GameProcessor {
   // Tracks each unit's position at the start of the current turn for movement range calculation.
   private turnStartPositions: Map<UnitId, Position> = new Map();
 
-  constructor(game: Game, unitTypes: Map<string, UnitType>, features: GameFeatures = { support: false, flanking: false }) {
+  constructor(
+    game: Game,
+    unitTypes: Map<string, UnitType>,
+    features: GameFeatures = { support: false, flanking: false }
+  ) {
     this.game = game;
     this.unitTypes = unitTypes;
     this.features = features;
@@ -54,7 +72,10 @@ export class GameProcessor {
         if (influencer.playerId === influencee.playerId) continue;
         const dist = this.game.map.grid.distance(influencer.position, influencee.position);
         if (dist >= unitType.aoiMin && dist <= unitType.aoiMax) {
-          this.influences.addInfluence({ influencerId: influencer.id, influenceeId: influencee.id });
+          this.influences.addInfluence({
+            influencerId: influencer.id,
+            influenceeId: influencee.id,
+          });
         }
       }
     }
@@ -83,14 +104,15 @@ export class GameProcessor {
         return this.handleOrderBuild(action, emit);
       case "CancelBuild":
         return this.handleCancelBuild(action, emit);
-      default:
+      default: {
         const exhaustive: never = action;
         return exhaustive;
+      }
     }
   }
 
   private handleMove(
-    action: { type: "Move"; unitId: any; position: any },
+    action: { type: "Move"; unitId: UnitId; position: Position },
     emit: GameEmitter
   ): { ok: true } | { ok: false; error: GameProcessorError } {
     const unitId: UnitId = action.unitId;
@@ -103,7 +125,10 @@ export class GameProcessor {
 
     const unit = player.units.get(unitId);
     if (!unit) {
-      return { ok: false, error: { message: "Unit not found or does not belong to current player" } };
+      return {
+        ok: false,
+        error: { message: "Unit not found or does not belong to current player" },
+      };
     }
 
     const unitType = this.unitTypes.get(unit.typeId);
@@ -137,7 +162,9 @@ export class GameProcessor {
     action: { type: "EndTurn" },
     emit: GameEmitter
   ): { ok: true } | { ok: false; error: GameProcessorError } {
-    const playerIds = Array.from(this.game.players.keys()).sort((a, b) => a - b);
+    const playerIds = Array.from(this.game.players.keys())
+      .filter((id) => !this.game.players.get(id)!.eliminated)
+      .sort((a, b) => a - b);
     const currentIndex = playerIds.indexOf(this.game.currentPlayerId);
     const nextIndex = (currentIndex + 1) % playerIds.length;
     const nextPlayerId = playerIds[nextIndex];
@@ -150,9 +177,15 @@ export class GameProcessor {
 
     emit({ type: "TurnStarted", playerId: nextPlayerId, turn: this.game.turn });
 
-    this.resolveConstructionForPlayer(nextPlayerId, emit);
-    this.applyStartOfTurnDamage(nextPlayerId, emit);
-    this.applyStartOfTurnRegen(nextPlayerId, emit);
+    let gameEnded = false;
+    const trackingEmit: GameEmitter = (e) => {
+      if (e.type === "GameEnded") gameEnded = true;
+      emit(e);
+    };
+    this.resolveConstructionForPlayer(nextPlayerId, trackingEmit);
+    this.applyStartOfTurnDamage(nextPlayerId, trackingEmit);
+    this.applyStartOfTurnRegen(nextPlayerId, trackingEmit);
+    if (!gameEnded) this.checkBaseCapture(trackingEmit);
 
     return { ok: true };
   }
@@ -174,12 +207,18 @@ export class GameProcessor {
     const claims = this.calculateClaims();
     const claimList = claims.get(key);
     const myClaim = claimList?.find((c) => c.playerId === this.game.currentPlayerId);
-    if (!myClaim || myClaim.claimType !== ClaimType.Direct || (claimList?.length ?? 0) > 1) {
-      return { ok: false, error: { message: "Facility is not directly and uniquely claimed by current player" } };
+    const nonSupportContestors =
+      claimList?.filter((c) => c.playerId !== this.game.currentPlayerId && !c.supportOnly) ?? [];
+    if (!myClaim || myClaim.claimType !== ClaimType.Direct || nonSupportContestors.length > 0) {
+      return {
+        ok: false,
+        error: { message: "Facility is not directly and uniquely claimed by current player" },
+      };
     }
 
     const unitType = this.unitTypes.get(action.unitTypeId);
-    if (!unitType) return { ok: false, error: { message: `Unknown unit type: ${action.unitTypeId}` } };
+    if (!unitType)
+      return { ok: false, error: { message: `Unknown unit type: ${action.unitTypeId}` } };
 
     // Cancel any existing build order at this facility first.
     for (const [id, u] of player.units) {
@@ -205,7 +244,10 @@ export class GameProcessor {
       }
     }
 
-    const newId = (Math.max(0, ...Array.from(this.game.players.values()).flatMap(p => Array.from(p.units.keys()))) + 1) as UnitId;
+    const newId = (Math.max(
+      0,
+      ...Array.from(this.game.players.values()).flatMap((p) => Array.from(p.units.keys()))
+    ) + 1) as UnitId;
     const newUnit: Unit = {
       id: newId,
       position: pos,
@@ -255,10 +297,12 @@ export class GameProcessor {
       const tile = this.game.map.tiles.get(key);
       const claimList = claims.get(key);
       const myClaim = claimList?.find((c) => c.playerId === playerId);
+      const contested = claimList?.some((c) => c.playerId !== playerId && !c.supportOnly) ?? false;
       const stillValid =
         tile?.features.includes(TileFeature.Facility) &&
         myClaim?.claimType === ClaimType.Direct &&
-        (claimList?.length ?? 0) === 1;
+        !myClaim.supportOnly &&
+        !contested;
 
       if (stillValid) {
         unit.underConstruction = false;
@@ -277,12 +321,15 @@ export class GameProcessor {
     const player = this.game.players.get(playerId);
     if (!player) return supported;
 
-    const basePos = this.game.map.bases.get(playerId);
-    if (!basePos) return supported;
+    const basePosArr = this.game.map.bases.get(playerId) ?? [];
+    if (basePosArr.length === 0) return supported;
 
     // Base seeds a 3-tile radius.
-    this.game.map.grid.tilesInRange(basePos, 0, 3)
-      .forEach((pos) => supported.add(positionKey(pos)));
+    for (const basePos of basePosArr) {
+      this.game.map.grid
+        .tilesInRange(basePos, 0, 3)
+        .forEach((pos) => supported.add(positionKey(pos)));
+    }
 
     // Build convoy AoI lookup once.
     const convoys: Array<{ posKey: string; aoiKeys: string[] }> = [];
@@ -328,19 +375,28 @@ export class GameProcessor {
       const unitType = this.unitTypes.get(unit.typeId);
       if (!unitType) return;
 
-      const underOpponentInfluence = Array.from(this.influences.getUnitsInfluencing(unit.id)).some((influencerId) => {
-        for (const [playerId, player] of this.game.players) {
-          if (playerId !== activePlayerId && player.units.has(influencerId)) return true;
+      const underOpponentInfluence = Array.from(this.influences.getUnitsInfluencing(unit.id)).some(
+        (influencerId) => {
+          for (const [playerId, player] of this.game.players) {
+            if (playerId !== activePlayerId && player.units.has(influencerId)) return true;
+          }
+          return false;
         }
-        return false;
-      });
+      );
 
       const isSupported = supportedTiles.has(positionKey(unit.position));
-      if (!underOpponentInfluence || isSupported) {
-        const newEnergy = Math.min(unit.energy + 1, unitType.maxEnergy);
-        if (newEnergy > unit.energy) {
+      const regenAmount = (isSupported ? 1 : 0) + (!underOpponentInfluence ? 1 : 0);
+      if (regenAmount > 0) {
+        const newEnergy = Math.min(unit.energy + regenAmount, unitType.maxEnergy);
+        const actualRegen = newEnergy - unit.energy;
+        if (actualRegen > 0) {
           unit.energy = newEnergy;
-          emit({ type: "EnergyRegenerated", unit: unitRef(unit), amount: 1, supported: isSupported });
+          emit({
+            type: "EnergyRegenerated",
+            unit: unitRef(unit),
+            amount: actualRegen,
+            supported: isSupported,
+          });
         }
       }
     });
@@ -393,26 +449,42 @@ export class GameProcessor {
 
       targets.forEach((target) => {
         const flanking = this.features.flanking && this.isFlanking(attacker, target);
-        const damageType = isMulti && flanking ? DamageType.SplitAndFlanked
-          : isMulti ? DamageType.Split
-          : flanking ? DamageType.Flanked
-          : DamageType.Normal;
-        const power = damageType === DamageType.SplitAndFlanked ? unitType.power
-          : damageType === DamageType.Split ? Math.floor(unitType.power / 2)
-          : damageType === DamageType.Flanked ? Math.floor(unitType.power * 3 / 2)
-          : unitType.power;
+        const damageType =
+          isMulti && flanking
+            ? DamageType.SplitAndFlanked
+            : isMulti
+              ? DamageType.Split
+              : flanking
+                ? DamageType.Flanked
+                : DamageType.Normal;
+        const power =
+          damageType === DamageType.SplitAndFlanked
+            ? unitType.power
+            : damageType === DamageType.Split
+              ? Math.floor(unitType.power / 2)
+              : damageType === DamageType.Flanked
+                ? Math.floor((unitType.power * 3) / 2)
+                : unitType.power;
 
         const opponentPlayer = this.game.players.get(target.playerId)!;
         const damageToEnergy = Math.min(power, target.energy);
         const damageToCondition = power - damageToEnergy;
         target.energy -= damageToEnergy;
         target.condition -= damageToCondition;
-        emit({ type: "UnitDamaged", unit: unitRef(target), attacker: unitRef(attacker), damageType, power, damageToEnergy, damageToCondition });
+        emit({
+          type: "UnitDamaged",
+          unit: unitRef(target),
+          attacker: unitRef(attacker),
+          damageType,
+          power,
+          damageToEnergy,
+          damageToCondition,
+        });
         if (target.condition <= 0) {
           opponentPlayer.units.delete(target.id);
           emit({ type: "UnitDestroyed", unit: unitRef(target), destroyedBy: unitRef(attacker) });
           if (opponentPlayer.units.size === 0) {
-            emit({ type: "GameEnded", winnerId: activePlayerId });
+            this.eliminatePlayer(opponentPlayer.id, emit);
           }
         }
       });
@@ -446,8 +518,9 @@ export class GameProcessor {
       if (!claimList) return;
       const myClaim = claimList.find((c) => c.playerId === playerId);
       if (!myClaim || myClaim.claimType !== ClaimType.Direct) return;
-      // Contested Direct claim → +1 (halved), Unique Direct → +2
-      depotBonus += claimList.length > 1 ? 1 : 2;
+      // Contested = another player has a non-support-only Direct claim on this tile
+      const contested = claimList.some((c) => c.playerId !== playerId && !c.supportOnly);
+      depotBonus += contested ? 1 : 2;
     });
 
     return base + depotBonus;
@@ -495,38 +568,44 @@ export class GameProcessor {
 
     this.game.players.forEach((player) => {
       const playerId = player.id;
-      const basePos = this.game.map.bases.get(playerId);
-      if (!basePos) return;
+      const basePosArr = this.game.map.bases.get(playerId) ?? [];
+      if (basePosArr.length === 0) return;
+      const baseKeys = new Set(basePosArr.map(positionKey));
 
-      // Collect tiles influenced by this player's units, noting direct vs indirect.
+      // Collect tiles influenced by this player's units.
+      // All unit types (including Support) contribute to territory claims via the BFS.
+      // Non-Support units additionally populate nonSupportInfluencedTiles, which is used
+      // to flag whether a claim is support-only (and thus excluded from uniqueness checks).
       const ownInfluencedTiles = new Set<string>();
       const directInfluencedTiles = new Set<string>();
+      const nonSupportInfluencedTiles = new Set<string>();
       player.units.forEach((unit) => {
         const ut = this.unitTypes.get(unit.typeId);
         if (!ut) return;
         this.game.map.grid.tilesInRange(unit.position, ut.aoiMin, ut.aoiMax).forEach((pos) => {
           const key = positionKey(pos);
           ownInfluencedTiles.add(key);
+          if (ut.effectType !== EffectType.Support) nonSupportInfluencedTiles.add(key);
           if (ut.effectType === EffectType.Direct) directInfluencedTiles.add(key);
         });
       });
 
       // BFS flood-fill from base; each reachable tile is claimed.
       const visited = new Set<string>();
-      const queue: Position[] = [basePos];
-      visited.add(positionKey(basePos));
+      const queue: Position[] = [...basePosArr];
+      basePosArr.forEach((bp) => visited.add(positionKey(bp)));
 
       while (queue.length > 0) {
         const pos = queue.shift()!;
         const key = positionKey(pos);
 
-        const isBase = key === positionKey(basePos);
-        const claimType = (isBase || directInfluencedTiles.has(key))
-          ? ClaimType.Direct
-          : ClaimType.Indirect;
+        const isBase = baseKeys.has(key);
+        const claimType =
+          isBase || directInfluencedTiles.has(key) ? ClaimType.Direct : ClaimType.Indirect;
+        const supportOnly = !isBase && !nonSupportInfluencedTiles.has(key);
 
         if (!claims.has(key)) claims.set(key, []);
-        claims.get(key)!.push({ playerId, claimType });
+        claims.get(key)!.push({ playerId, claimType, supportOnly: supportOnly || undefined });
 
         for (const nb of this.game.map.grid.neighbors(pos)) {
           const nbKey = positionKey(nb);
@@ -539,5 +618,42 @@ export class GameProcessor {
     });
 
     return claims;
+  }
+
+  private eliminatePlayer(playerId: number, emit: GameEmitter): void {
+    const player = this.game.players.get(playerId);
+    if (!player || player.eliminated) return;
+    player.eliminated = true;
+    emit({ type: "PlayerEliminated", playerId });
+    this.checkForWinner(emit);
+  }
+
+  private checkForWinner(emit: GameEmitter): void {
+    const remaining = Array.from(this.game.players.values()).filter((p) => !p.eliminated);
+    if (remaining.length === 1) {
+      emit({ type: "GameEnded", winnerId: remaining[0].id });
+    }
+  }
+
+  private checkBaseCapture(emit: GameEmitter): void {
+    for (const [playerId, basePosArr] of this.game.map.bases) {
+      if (basePosArr.length === 0) continue;
+      const player = this.game.players.get(playerId);
+      if (!player || player.eliminated) continue;
+      const allOccupied = basePosArr.every((basePos) => {
+        const baseKey = positionKey(basePos);
+        for (const [otherPlayerId, otherPlayer] of this.game.players) {
+          if (otherPlayerId === playerId) continue;
+          for (const [, unit] of otherPlayer.units) {
+            if (positionKey(unit.position) === baseKey) return true;
+          }
+        }
+        return false;
+      });
+      if (allOccupied) {
+        this.eliminatePlayer(playerId, emit);
+        return;
+      }
+    }
   }
 }

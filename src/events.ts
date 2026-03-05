@@ -4,7 +4,13 @@ import { UnitId, Position, DamageType } from "./domain";
 // Action Events - User intents that change game state
 // ============================================================================
 
-export type ActionEvent = MoveAction | EndTurnAction | UnitSelectedAction | SelectionClearedAction | OrderBuildAction | CancelBuildAction;
+export type ActionEvent =
+  | MoveAction
+  | EndTurnAction
+  | UnitSelectedAction
+  | SelectionClearedAction
+  | OrderBuildAction
+  | CancelBuildAction;
 
 export interface MoveAction {
   type: "Move";
@@ -54,6 +60,7 @@ export type GameEvent =
   | EnergyRegeneratedEvent
   | UnitDestroyedEvent
   | TurnStartedEvent
+  | PlayerEliminatedEvent
   | GameEndedEvent
   | BuildOrderedEvent
   | UnitBuiltEvent
@@ -94,6 +101,11 @@ export interface TurnStartedEvent {
   turn: number;
 }
 
+export interface PlayerEliminatedEvent {
+  type: "PlayerEliminated";
+  playerId: number;
+}
+
 export interface GameEndedEvent {
   type: "GameEnded";
   winnerId: number;
@@ -115,4 +127,3 @@ export interface BuildCancelledEvent {
   unit: UnitRef;
   facilityPosition: Position;
 }
-

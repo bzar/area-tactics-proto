@@ -3,7 +3,16 @@ import { loadMap, listMaps, defaultUnitTypes, createGameFromMap } from "./maps";
 import { GameProcessor, GameFeatures } from "./game";
 import { InputProcessor } from "./input";
 import { ActionEvent, GameEvent, UnitRef } from "./events";
-import { createPosition, positionKey, UnitId, Unit, EffectType, TileFeature, ClaimType, PlayerType } from "./domain";
+import {
+  createPosition,
+  positionKey,
+  UnitId,
+  Unit,
+  EffectType,
+  TileFeature,
+  ClaimType,
+  PlayerType,
+} from "./domain";
 import { runBot } from "./bot";
 
 // ============================================================================
@@ -13,7 +22,7 @@ import { runBot } from "./bot";
 // Scale hex size so the game is legible on smaller retina screens.
 // Reference: 28px at 1600px+ viewport width; inversely scales for narrower screens.
 function computeHexSize(): number {
-  return Math.max(28, Math.min(44, Math.round(1600 * 28 / Math.max(window.innerWidth, 900))));
+  return Math.max(28, Math.min(44, Math.round((1600 * 28) / Math.max(window.innerWidth, 900))));
 }
 let HEX_SIZE = computeHexSize();
 const SQRT3 = Math.sqrt(3);
@@ -21,10 +30,7 @@ const WORLD_ORIGIN_X = 50;
 const WORLD_ORIGIN_Y = 50;
 
 function hexCenter(q: number, r: number): [number, number] {
-  return [
-    WORLD_ORIGIN_X + HEX_SIZE * 1.5 * q,
-    WORLD_ORIGIN_Y + HEX_SIZE * SQRT3 * (r + q / 2),
-  ];
+  return [WORLD_ORIGIN_X + HEX_SIZE * 1.5 * q, WORLD_ORIGIN_Y + HEX_SIZE * SQRT3 * (r + q / 2)];
 }
 
 function hexCorners(cx: number, cy: number): number[] {
@@ -40,8 +46,12 @@ function pixelToHex(px: number, py: number): [number, number] {
   const fq = (px - WORLD_ORIGIN_X) / (HEX_SIZE * 1.5);
   const fr = (py - WORLD_ORIGIN_Y) / (HEX_SIZE * SQRT3) - fq / 2;
   const fs = -fq - fr;
-  let rq = Math.round(fq), rr = Math.round(fr), rs = Math.round(fs);
-  const dq = Math.abs(rq - fq), dr = Math.abs(rr - fr), ds = Math.abs(rs - fs);
+  let rq = Math.round(fq),
+    rr = Math.round(fr);
+  const rs = Math.round(fs);
+  const dq = Math.abs(rq - fq),
+    dr = Math.abs(rr - fr),
+    ds = Math.abs(rs - fs);
   if (dq > dr && dq > ds) rq = -rr - rs;
   else if (dr > ds) rr = -rq - rs;
   return [rq, rr];
@@ -55,7 +65,8 @@ function rgbToHsl(hex: number): [number, number, number] {
   const r = ((hex >> 16) & 0xff) / 255;
   const g = ((hex >> 8) & 0xff) / 255;
   const b = (hex & 0xff) / 255;
-  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  const max = Math.max(r, g, b),
+    min = Math.min(r, g, b);
   const l = (max + min) / 2;
   if (max === min) return [0, 0, l];
   const d = max - min;
@@ -69,17 +80,18 @@ function rgbToHsl(hex: number): [number, number, number] {
 
 function hslToHex(h: number, s: number, l: number): number {
   const f = (p: number, q: number, t: number) => {
-    if (t < 0) t += 1; if (t > 1) t -= 1;
-    if (t < 1/6) return p + (q - p) * 6 * t;
-    if (t < 1/2) return q;
-    if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+    if (t < 0) t += 1;
+    if (t > 1) t -= 1;
+    if (t < 1 / 6) return p + (q - p) * 6 * t;
+    if (t < 1 / 2) return q;
+    if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
     return p;
   };
   const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
   const p = 2 * l - q;
-  const r = Math.round(f(p, q, h + 1/3) * 255);
+  const r = Math.round(f(p, q, h + 1 / 3) * 255);
   const g = Math.round(f(p, q, h) * 255);
-  const bv = Math.round(f(p, q, h - 1/3) * 255);
+  const bv = Math.round(f(p, q, h - 1 / 3) * 255);
   return (r << 16) | (g << 8) | bv;
 }
 
@@ -95,34 +107,36 @@ function buildClaimedFill(playerHex: number, baseHex: number): number {
 // ============================================================================
 
 const C = {
-  bg:           0x1a1a2e,
-  hexFill:      0x1e2847,
-  hexHover:     0x253060,
-  hexStroke:    0x334466,
-  validMove:    0x1a4d2e,
-  selected:     0x4d3a00,
-  p1:           0x3366ee,
-  p2:           0xdd3333,
-  selectRing:   0xffcc00,
+  bg: 0x1a1a2e,
+  hexFill: 0x1e2847,
+  hexHover: 0x253060,
+  hexStroke: 0x334466,
+  validMove: 0x1a4d2e,
+  selected: 0x4d3a00,
+  p1: 0x3366ee,
+  p2: 0xdd3333,
+  selectRing: 0xffcc00,
   influenceRing: 0xffffaa,
-  energy:       0x2255ee,
-  condition:    0xdd2222,
-  barBg:        0x111827,
+  energy: 0x2255ee,
+  condition: 0xdd2222,
+  barBg: 0x111827,
 };
 
 const UNIT_LABEL: Record<string, string> = {
-  infantry: "I", mortar: "M", scout: "S", convoy: "C",
+  infantry: "I",
+  mortar: "M",
+  scout: "S",
+  convoy: "C",
 };
 
 // Claimed tile fill colors: player H+S blended with hexFill L.
 // Contested: midpoint of both player fills in RGB space.
 const CLAIMED_P1 = buildClaimedFill(C.p1, C.hexFill);
 const CLAIMED_P2 = buildClaimedFill(C.p2, C.hexFill);
-const CLAIMED_CONTESTED = (
+const CLAIMED_CONTESTED =
   (((((CLAIMED_P1 >> 16) & 0xff) + ((CLAIMED_P2 >> 16) & 0xff)) >> 1) << 16) |
-  (((((CLAIMED_P1 >> 8) & 0xff)  + ((CLAIMED_P2 >> 8) & 0xff))  >> 1) << 8)  |
-  ((((CLAIMED_P1 & 0xff)         + (CLAIMED_P2 & 0xff))          >> 1))
-);
+  (((((CLAIMED_P1 >> 8) & 0xff) + ((CLAIMED_P2 >> 8) & 0xff)) >> 1) << 8) |
+  (((CLAIMED_P1 & 0xff) + (CLAIMED_P2 & 0xff)) >> 1);
 
 const PLAYER_CSS: Record<number, string> = {
   1: "#5588ff",
@@ -164,20 +178,26 @@ function logGameEvent(e: GameEvent) {
       tickerLine(`${unitSpan(e.unit)} moved to (${e.position.q}, ${e.position.r})`);
       break;
     case "UnitDamaged": {
-      const typeLabel = e.damageType === "Normal" ? "" : ` <span style="color:#aaa">[${e.damageType}]</span>`;
-      const detail = e.damageToCondition > 0
-        ? `${e.damageToEnergy} energy, ${e.damageToCondition} condition`
-        : `${e.damageToEnergy} energy`;
-      tickerLine(`${unitSpan(e.attacker)} → ${unitSpan(e.unit)} dealt ${e.power}${typeLabel}: ${detail}`);
+      const typeLabel =
+        e.damageType === "Normal" ? "" : ` <span style="color:#aaa">[${e.damageType}]</span>`;
+      const detail =
+        e.damageToCondition > 0
+          ? `${e.damageToEnergy} energy, ${e.damageToCondition} condition`
+          : `${e.damageToEnergy} energy`;
+      tickerLine(
+        `${unitSpan(e.attacker)} → ${unitSpan(e.unit)} dealt ${e.power}${typeLabel}: ${detail}`
+      );
       break;
     }
     case "EnergyRegenerated": {
-      const note = e.supported ? " <span style=\"color:#aaa\">[supported]</span>" : "";
+      const note = e.supported ? ' <span style="color:#aaa">[supported]</span>' : "";
       tickerLine(`${unitSpan(e.unit)} regenerated ${e.amount} energy${note}`);
       break;
     }
     case "UnitDestroyed":
-      tickerLine(`${unitSpan(e.unit)} was <span style="color:#ff4444">destroyed</span> by ${unitSpan(e.destroyedBy)}`);
+      tickerLine(
+        `${unitSpan(e.unit)} was <span style="color:#ff4444">destroyed</span> by ${unitSpan(e.destroyedBy)}`
+      );
       break;
     case "TurnStarted":
       tickerSeparator();
@@ -187,7 +207,9 @@ function logGameEvent(e: GameEvent) {
       tickerLine(`<span style="color:#ffcc00">Game over — Player ${e.winnerId} wins!</span>`);
       break;
     case "BuildOrdered":
-      tickerLine(`${unitSpan(e.unit)} build ordered at (${e.facilityPosition.q}, ${e.facilityPosition.r})`);
+      tickerLine(
+        `${unitSpan(e.unit)} build ordered at (${e.facilityPosition.q}, ${e.facilityPosition.r})`
+      );
       break;
     case "UnitBuilt":
       tickerLine(`${unitSpan(e.unit)} <span style="color:#88ffaa">construction complete</span>`);
@@ -198,8 +220,6 @@ function logGameEvent(e: GameEvent) {
   }
 }
 
-
-
 const unitTypes = defaultUnitTypes();
 
 function freshGame(mapName: string, features: GameFeatures = { support: false }, p2IsAI = false) {
@@ -209,10 +229,15 @@ function freshGame(mapName: string, features: GameFeatures = { support: false },
     const p2 = g.players.get(2);
     if (p2) p2.type = PlayerType.AI;
   }
-  return { game: g, gameProcessor: new GameProcessor(g, unitTypes, features), inputProcessor: new InputProcessor() };
+  return {
+    game: g,
+    gameProcessor: new GameProcessor(g, unitTypes, features),
+    inputProcessor: new InputProcessor(),
+  };
 }
 
 let { game, gameProcessor, inputProcessor } = freshGame("test");
+let gameIsOver = false;
 let selectedUnitId: UnitId | null = null;
 let validDests: Array<[number, number]> = [];
 let hoveredPos: { q: number; r: number } | null = null;
@@ -264,7 +289,10 @@ function getLabel(text: string, size: number): PIXI.Text {
 // Returns:
 //   byPlayer: positionKey → playerIds (for border coloring)
 //   byUnit:   positionKey → UnitIds   (for mouseover unit highlighting)
-function buildTileInfluence(): { byPlayer: Map<string, Set<number>>; byUnit: Map<string, Set<UnitId>> } {
+function buildTileInfluence(): {
+  byPlayer: Map<string, Set<number>>;
+  byUnit: Map<string, Set<UnitId>>;
+} {
   const byPlayer = new Map<string, Set<number>>();
   const byUnit = new Map<string, Set<UnitId>>();
   game.players.forEach((player) => {
@@ -291,8 +319,7 @@ function drawRelations() {
     const supportedTiles = gameProcessor.getSupportedTiles(player.id);
     if (supportedTiles.size === 0) return;
 
-    const basePos = game.map.bases.get(player.id);
-    const [bx, by] = basePos ? hexCenter(basePos.q, basePos.r) : [0, 0];
+    const basePosArr = game.map.bases.get(player.id) ?? [];
 
     // Categorise units: convoys vs non-convoys
     const convoys: Unit[] = [];
@@ -303,27 +330,27 @@ function drawRelations() {
       (ut.effectType === EffectType.Support ? convoys : nonConvoys).push(unit);
     });
 
-    // Base → units it directly supports (within base 3-radius, non-convoy)
-    // Base → convoys on supported tile (network, thick)
-    if (basePos) {
-      const baseRadius = new Set(
-        game.map.grid.tilesInRange(basePos, 0, 3).map(positionKey)
-      );
+    // Each base → units / convoys within its 3-tile radius that are supported
+    basePosArr.forEach((basePos) => {
+      const [bx, by] = hexCenter(basePos.q, basePos.r);
+      const baseRadius = new Set(game.map.grid.tilesInRange(basePos, 0, 3).map(positionKey));
       nonConvoys.forEach((unit) => {
         const unitKey = positionKey(unit.position);
         if (!baseRadius.has(unitKey) || !supportedTiles.has(unitKey)) return;
         const [ux, uy] = hexCenter(unit.position.q, unit.position.r);
         relationsGfx.lineStyle(1.5, 0x00ccff, 0.45);
-        relationsGfx.moveTo(bx, by); relationsGfx.lineTo(ux, uy);
+        relationsGfx.moveTo(bx, by);
+        relationsGfx.lineTo(ux, uy);
       });
       convoys.forEach((convoy) => {
         const cKey = positionKey(convoy.position);
         if (!baseRadius.has(cKey) || !supportedTiles.has(cKey)) return;
         const [cx, cy] = hexCenter(convoy.position.q, convoy.position.r);
         relationsGfx.lineStyle(2.5, 0x00ccff, 0.6);
-        relationsGfx.moveTo(bx, by); relationsGfx.lineTo(cx, cy);
+        relationsGfx.moveTo(bx, by);
+        relationsGfx.lineTo(cx, cy);
       });
-    }
+    });
 
     // Convoy → units / other convoys in its AoI that are supported
     convoys.forEach((convoy) => {
@@ -331,16 +358,21 @@ function drawRelations() {
       if (!supportedTiles.has(cKey)) return; // convoy itself must be supported
       const [cvx, cvy] = hexCenter(convoy.position.q, convoy.position.r);
       const convoyAoi = new Set(
-        game.map.grid.tilesInRange(convoy.position,
-          unitTypes.get(convoy.typeId)!.aoiMin,
-          unitTypes.get(convoy.typeId)!.aoiMax).map(positionKey)
+        game.map.grid
+          .tilesInRange(
+            convoy.position,
+            unitTypes.get(convoy.typeId)!.aoiMin,
+            unitTypes.get(convoy.typeId)!.aoiMax
+          )
+          .map(positionKey)
       );
       nonConvoys.forEach((unit) => {
         const unitKey = positionKey(unit.position);
         if (supportedTiles.has(unitKey) && convoyAoi.has(unitKey)) {
           const [ux, uy] = hexCenter(unit.position.q, unit.position.r);
           relationsGfx.lineStyle(1.5, 0x00ccff, 0.45);
-          relationsGfx.moveTo(cvx, cvy); relationsGfx.lineTo(ux, uy);
+          relationsGfx.moveTo(cvx, cvy);
+          relationsGfx.lineTo(ux, uy);
         }
       });
       convoys.forEach((other) => {
@@ -349,7 +381,8 @@ function drawRelations() {
         if (supportedTiles.has(otherKey) && convoyAoi.has(otherKey)) {
           const [ox, oy] = hexCenter(other.position.q, other.position.r);
           relationsGfx.lineStyle(2.5, 0x00ccff, 0.6);
-          relationsGfx.moveTo(cvx, cvy); relationsGfx.lineTo(ox, oy);
+          relationsGfx.moveTo(cvx, cvy);
+          relationsGfx.lineTo(ox, oy);
         }
       });
     });
@@ -360,7 +393,7 @@ function render() {
   mapGfx.clear();
   relationsGfx.clear();
   unitGfx.clear();
-  labelPool.push(...labelLayer.removeChildren() as PIXI.Text[]);
+  labelPool.push(...(labelLayer.removeChildren() as PIXI.Text[]));
 
   const { grid } = game.map;
 
@@ -368,7 +401,9 @@ function render() {
   const { byPlayer, byUnit } = buildTileInfluence();
   const claims = gameProcessor.getClaims();
   const hoveredKey = hoveredPos ? positionKey(hoveredPos) : null;
-  const hoveredInfluencers: Set<UnitId> = hoveredKey ? (byUnit.get(hoveredKey) ?? new Set()) : new Set();
+  const hoveredInfluencers: Set<UnitId> = hoveredKey
+    ? (byUnit.get(hoveredKey) ?? new Set())
+    : new Set();
 
   for (const { q, r } of grid.getTiles()) {
     const [cx, cy] = hexCenter(q, r);
@@ -387,9 +422,9 @@ function render() {
     let strokeWidth = 1;
     if (influencers && influencers.size > 0) {
       strokeWidth = 2;
-      if (influencers.size > 1)    strokeColor = 0xffffff;
+      if (influencers.size > 1) strokeColor = 0xffffff;
       else if (influencers.has(1)) strokeColor = C.p1;
-      else                         strokeColor = C.p2;
+      else strokeColor = C.p2;
     }
     mapGfx.lineStyle(strokeWidth, strokeColor);
     mapGfx.beginFill(fill);
@@ -409,8 +444,10 @@ function render() {
     for (const feature of tile.features) {
       if (feature === TileFeature.Base) {
         // 5-pointed star, colored by owning player
-        const color = tile.baseForPlayerId === 1 ? C.p1 : tile.baseForPlayerId === 2 ? C.p2 : 0xffffff;
-        const outerR = HEX_SIZE * 0.32, innerR = HEX_SIZE * 0.13;
+        const color =
+          tile.baseForPlayerId === 1 ? C.p1 : tile.baseForPlayerId === 2 ? C.p2 : 0xffffff;
+        const outerR = HEX_SIZE * 0.32,
+          innerR = HEX_SIZE * 0.13;
         const pts: number[] = [];
         for (let i = 0; i < 10; i++) {
           const a = (Math.PI / 5) * i - Math.PI / 2;
@@ -421,18 +458,17 @@ function render() {
         mapGfx.beginFill(color, 0.85);
         mapGfx.drawPolygon(pts);
         mapGfx.endFill();
-
       } else if (feature === TileFeature.Depot) {
         // Wide flat rectangle — gold if directly and uniquely claimed, else grey
         const claimList = claims.get(key);
         const directUnique = claimList?.length === 1 && claimList[0].claimType === ClaimType.Direct;
         const color = directUnique ? (claimList![0].playerId === 1 ? C.p1 : C.p2) : 0x777788;
-        const w = HEX_SIZE * 0.72, h = HEX_SIZE * 0.22;
+        const w = HEX_SIZE * 0.72,
+          h = HEX_SIZE * 0.22;
         mapGfx.lineStyle(1, 0xffffff, 0.4);
         mapGfx.beginFill(color, 0.85);
         mapGfx.drawRect(cx - w / 2, cy - h / 2, w, h);
         mapGfx.endFill();
-
       } else if (feature === TileFeature.Facility) {
         // Small hexagon — teal if directly and uniquely claimed, else grey
         const claimList = claims.get(key);
@@ -482,7 +518,11 @@ function render() {
 
       // Unit circle — translucent when under construction
       const alpha = unit.underConstruction ? 0.45 : 1;
-      unitGfx.lineStyle(isSelected ? 2 : 1, isSelected ? C.selectRing : 0xffffff, (isSelected ? 1 : 0.35) * alpha);
+      unitGfx.lineStyle(
+        isSelected ? 2 : 1,
+        isSelected ? C.selectRing : 0xffffff,
+        (isSelected ? 1 : 0.35) * alpha
+      );
       unitGfx.beginFill(pColor, alpha);
       unitGfx.drawCircle(cx, cy, unitRadius);
       unitGfx.endFill();
@@ -528,17 +568,27 @@ function updateHUD() {
 const unitInfoEl = document.getElementById("unit-info") as HTMLElement;
 
 function updateUnitInfo() {
-  if (!hoveredPos) { unitInfoEl.style.display = "none"; return; }
+  if (!hoveredPos) {
+    unitInfoEl.style.display = "none";
+    return;
+  }
   const key = positionKey(hoveredPos);
   let unit: Unit | undefined;
   let playerId = 0;
   for (const [pid, player] of game.players) {
     for (const u of player.units.values()) {
-      if (positionKey(u.position) === key) { unit = u; playerId = pid; break; }
+      if (positionKey(u.position) === key) {
+        unit = u;
+        playerId = pid;
+        break;
+      }
     }
     if (unit) break;
   }
-  if (!unit) { unitInfoEl.style.display = "none"; return; }
+  if (!unit) {
+    unitInfoEl.style.display = "none";
+    return;
+  }
 
   const ut = unitTypes.get(unit.typeId)!;
   const bgColor = playerId === 1 ? "#1a2f6e" : "#6e1a1a";
@@ -584,8 +634,9 @@ function openBuildDialog(pos: { q: number; r: number }) {
 
   // Find existing build order at this facility (if any) and subtract its cost
   // so we compare against the "load without this slot"
-  const existingOrder = Array.from(game.players.get(game.currentPlayerId)!.units.values())
-    .find((u) => u.underConstruction && positionKey(u.position) === key);
+  const existingOrder = Array.from(game.players.get(game.currentPlayerId)!.units.values()).find(
+    (u) => u.underConstruction && positionKey(u.position) === key
+  );
   const slotsInUse = load - (existingOrder ? (unitTypes.get(existingOrder.typeId)?.cost ?? 0) : 0);
 
   const listEl = document.getElementById("build-list")!;
@@ -611,7 +662,10 @@ function openBuildDialog(pos: { q: number; r: number }) {
   confirmBtn.disabled = true;
 
   const preselect = existingOrder?.typeId ?? firstAvailableId;
-  if (preselect && !document.querySelector(`#build-list li[data-type-id="${preselect}"].bl-disabled`)) {
+  if (
+    preselect &&
+    !document.querySelector(`#build-list li[data-type-id="${preselect}"].bl-disabled`)
+  ) {
     selectBuildType(preselect);
   } else {
     // Clear detail panel
@@ -673,14 +727,18 @@ function closeBuildDialog() {
 // Dialog button / backdrop handlers
 document.getElementById("build-close-btn")!.addEventListener("click", closeBuildDialog);
 document.getElementById("build-dialog")!.addEventListener("click", (e) => {
-  if ((e.target as HTMLElement).id === "build-dialog" && Date.now() - buildDialogOpenedAt > 300) closeBuildDialog();
+  if ((e.target as HTMLElement).id === "build-dialog" && Date.now() - buildDialogOpenedAt > 300)
+    closeBuildDialog();
 });
 document.getElementById("build-confirm-btn")!.addEventListener("click", () => {
   if (!buildDialogPos || !buildDialogSelectedType) return;
   const pos = createPosition(buildDialogPos.q, buildDialogPos.r);
-  gameProcessor.handle({ type: "OrderBuild", facilityPosition: pos, unitTypeId: buildDialogSelectedType }, (e) => {
-    logGameEvent(e);
-  });
+  gameProcessor.handle(
+    { type: "OrderBuild", facilityPosition: pos, unitTypeId: buildDialogSelectedType },
+    (e) => {
+      logGameEvent(e);
+    }
+  );
   updateHUD();
   render();
   closeBuildDialog();
@@ -703,7 +761,10 @@ function processActions(actions: ActionEvent[]) {
       validDests = [];
       gameProcessor.handle(action, (e) => {
         logGameEvent(e);
-        if (e.type === "GameEnded") showGameOver(e.winnerId);
+        if (e.type === "GameEnded") {
+          gameIsOver = true;
+          showGameOver(e.winnerId);
+        }
       });
       updateHUD();
     }
@@ -715,6 +776,7 @@ function processActions(actions: ActionEvent[]) {
 
 /** If the current player is an AI, run the bot after a brief render delay. */
 function scheduleBotIfAI() {
+  if (gameIsOver) return;
   const player = game.players.get(game.currentPlayerId);
   if (player?.type !== PlayerType.AI) return;
   updateHUD(); // show current state before thinking
@@ -722,7 +784,11 @@ function scheduleBotIfAI() {
     let gameEnded = false;
     runBot(gameProcessor, (e) => {
       logGameEvent(e);
-      if (e.type === "GameEnded") { showGameOver(e.winnerId); gameEnded = true; }
+      if (e.type === "GameEnded") {
+        gameIsOver = true;
+        showGameOver(e.winnerId);
+        gameEnded = true;
+      }
     });
     selectedUnitId = null;
     validDests = [];
@@ -806,10 +872,12 @@ canvas.addEventListener("pointerup", (e) => {
 
       const key = positionKey(pos);
       const hasBuildableUnit = Array.from(game.players.values()).some((p) =>
-        Array.from(p.units.values()).some((u) => positionKey(u.position) === key && !u.underConstruction)
+        Array.from(p.units.values()).some(
+          (u) => positionKey(u.position) === key && !u.underConstruction
+        )
       );
-      const isValidMoveDest = selectedUnitId !== null &&
-        validDests.some(([dq, dr]) => dq === q && dr === r);
+      const isValidMoveDest =
+        selectedUnitId !== null && validDests.some(([dq, dr]) => dq === q && dr === r);
 
       if (!isValidMoveDest && !hasBuildableUnit && isBuildableFacility(pos)) {
         // Clear any pending unit selection before opening dialog
@@ -820,7 +888,9 @@ canvas.addEventListener("pointerup", (e) => {
         openBuildDialog(pos);
       } else {
         const actions: ActionEvent[] = [];
-        inputProcessor.handle({ type: "TileDown", position: pos }, gameProcessor, (a) => actions.push(a));
+        inputProcessor.handle({ type: "TileDown", position: pos }, gameProcessor, (a) =>
+          actions.push(a)
+        );
         processActions(actions);
       }
     }
@@ -848,13 +918,16 @@ listMaps().forEach(({ name, label }, i) => {
 });
 
 document.getElementById("start-btn")!.addEventListener("click", () => {
-  const selected = (document.querySelector('input[name="map"]:checked') as HTMLInputElement)?.value ?? "test";
+  const selected =
+    (document.querySelector('input[name="map"]:checked') as HTMLInputElement)?.value ?? "test";
   const features: GameFeatures = {
     support: (document.getElementById("f-support") as HTMLInputElement).checked,
     flanking: (document.getElementById("f-flanking") as HTMLInputElement).checked,
   };
-  const p2IsAI = (document.querySelector('input[name="mode"]:checked') as HTMLInputElement)?.value === "hva";
+  const p2IsAI =
+    (document.querySelector('input[name="mode"]:checked') as HTMLInputElement)?.value === "hva";
   ({ game, gameProcessor, inputProcessor } = freshGame(selected, features, p2IsAI));
+  gameIsOver = false;
   selectedUnitId = null;
   validDests = [];
   hoveredPos = null;

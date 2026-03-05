@@ -48,6 +48,7 @@ export interface Player {
   id: number;
   type: PlayerType;
   units: Map<UnitId, Unit>;
+  eliminated?: boolean;
 }
 
 export interface Game {
@@ -87,7 +88,10 @@ export class HexGrid {
     this.tilePositions = positions;
     this.tileSet = new Set(positions.map(positionKey));
     this.tileCount = positions.length;
-    let minQ = Infinity, maxQ = -Infinity, minR = Infinity, maxR = -Infinity;
+    let minQ = Infinity,
+      maxQ = -Infinity,
+      minR = Infinity,
+      maxR = -Infinity;
     for (const { q, r } of positions) {
       if (q < minQ) minQ = q;
       if (q > maxQ) maxQ = q;
@@ -103,8 +107,7 @@ export class HexGrid {
   static rect(width: number, height: number): HexGrid {
     const positions: Position[] = [];
     for (let q = 0; q < width; q++)
-      for (let r = 0; r < height; r++)
-        positions.push(createPosition(q, r));
+      for (let r = 0; r < height; r++) positions.push(createPosition(q, r));
     return new HexGrid(positions);
   }
 
@@ -113,7 +116,8 @@ export class HexGrid {
   }
 
   isInBounds(pos: Position): boolean {
-    if (pos.q < this.minQ || pos.q > this.maxQ || pos.r < this.minR || pos.r > this.maxR) return false;
+    if (pos.q < this.minQ || pos.q > this.maxQ || pos.r < this.minR || pos.r > this.maxR)
+      return false;
     return this.tileSet.has(positionKey(pos));
   }
 
@@ -139,7 +143,11 @@ export class HexGrid {
     const tiles: Position[] = [];
     const qr = center.q + center.r;
     for (let q = center.q - maxRange; q <= center.q + maxRange; q++) {
-      for (let r = Math.max(center.r - maxRange, qr - q - maxRange); r <= Math.min(center.r + maxRange, qr - q + maxRange); r++) {
+      for (
+        let r = Math.max(center.r - maxRange, qr - q - maxRange);
+        r <= Math.min(center.r + maxRange, qr - q + maxRange);
+        r++
+      ) {
         const pos = createPosition(q, r);
         const dist = this.distance(center, pos);
         if (dist >= minRange && dist <= maxRange && this.isInBounds(pos)) {
@@ -172,11 +180,10 @@ export interface GameMap {
   grid: HexGrid;
   tiles: Map<string, Tile>;
   /** Quick lookup: playerId → position of that player's base tile. */
-  bases: Map<number, Position>;
+  bases: Map<number, Position[]>;
   /** Per-player unit capacity. Optional; absent means unlimited. */
   unitCapacity?: Map<number, number>;
 }
-
 
 // ============================================================================
 // Influence
@@ -248,6 +255,9 @@ export enum ClaimType {
 export interface Claim {
   playerId: number;
   claimType: ClaimType;
+  /** True when this player's claim on the tile comes solely from Support units.
+   *  Support-only claims count for territory display but do not contest uniqueness. */
+  supportOnly?: boolean;
 }
 
 /**

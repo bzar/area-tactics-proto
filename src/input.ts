@@ -37,9 +37,10 @@ export class InputProcessor {
         return this.handleTileDown(input.position, gameProcessor, emit);
       case "EndTurn":
         return this.handleEndTurn(emit);
-      default:
+      default: {
         const exhaustive: never = input;
         return exhaustive;
+      }
     }
   }
 

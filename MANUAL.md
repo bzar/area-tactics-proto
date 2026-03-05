@@ -28,14 +28,14 @@ Each player starts with a set of units placed near their base. Units have a **ty
 
 | Type | Effect | AoI | Power | Movement | Energy | Condition | Cost |
 |------|--------|-----|-------|----------|--------|-----------|------|
-| Infantry | Direct | 0–2 | 4 | 3 | 10 | 10 | 1 |
-| Mortar | Indirect | 3–5 | 10 | 2 | 10 | 5 | 2 |
-| Scout | Direct | 0–4 | 6 | 7 | 20 | 10 | 2 |
+| Infantry | Direct | 0–2 | 4 | 3 | 6 | 10 | 1 |
+| Mortar | Indirect | 3–5 | 10 | 2 | 4 | 5 | 2 |
+| Scout | Direct | 0–4 | 6 | 7 | 10 | 6 | 2 |
 | Convoy | Support | 0–4 | 0 | 5 | 5 | 5 | 1 |
 
 ### Unit Stats
 
-- **Energy** — shown as a blue bar. Absorbs damage first. Regenerates by 1 each turn when not under enemy influence (or when supported — see Support below).
+- **Energy** — shown as a blue bar. Absorbs damage first. Regenerates each turn based on support status: +1 when not under enemy influence (base), +1 more when on a supported tile. So: unsupported and not under fire = 1, supported and under fire = 1, supported and not under fire = 2, unsupported and under fire = 0.
 - **Condition** — shown as a red bar. Takes damage when energy runs out. A unit with 0 condition is **destroyed**.
 - **AoI (Area of Influence)** — the range of hex-distances in which this unit affects others. AoI 0–2 means the unit influences everything from the tile it stands on out to 2 hexes away.
 - **Power** — how much damage this unit deals per turn to each enemy it influences.
@@ -67,7 +67,7 @@ A unit can be moved multiple times during a turn, but the allowed range is alway
 Click **End Turn** (top-right). At that moment:
 
 1. All your units that are in range of enemy units deal damage.
-2. Your units that are **not** under enemy influence (or are supported) regenerate 1 energy.
+2. Your units regenerate energy: **1** if not under enemy influence, **+1** more if on a supported tile (0 if under fire and unsupported).
 3. Any build orders you placed this turn are checked and the new unit spawns (if conditions are still met).
 4. The next player's turn begins.
 
@@ -109,9 +109,11 @@ Claims spread in a connected chain from your base — you cannot claim distant t
 | Type | Condition |
 |------|-----------|
 | **Direct** | At least one of your Direct or Indirect units influences the tile |
-| **Indirect** | The tile is claimed only by your Support (Convoy) units |
-| **Unique** | Only your units influence this tile |
-| **Contested** | Both players' units influence this tile |
+| **Indirect** | The tile is claimed only by your Indirect units |
+| **Unique** | Only your non-Support units influence this tile |
+| **Contested** | Both players' non-Support units influence this tile |
+
+Support (Convoy) units do claim territory (extending your coloured area along the supply chain) but do not affect claim uniqueness — an enemy convoy alone cannot contest your facility or depot.
 
 Claimed tiles are **tinted in your team's colour**. Contested tiles show a mixed colour. Indirect claims use a dotted-line indicator.
 
@@ -172,7 +174,14 @@ Convoys chain from one to the next, extending the supply line as far as you need
 
 ### Effect of Support
 
-Units on supported tiles **regenerate 1 energy per turn even while under enemy influence**. Without support, units under enemy fire cannot regenerate.
+Support grants **+1 energy regeneration per turn** to units on supported tiles. The effect stacks with the base regeneration:
+
+| Condition | Regen per turn |
+|-----------|---------------|
+| Unsupported, not under enemy fire | **1** |
+| Supported, under enemy fire | **1** |
+| Supported, not under enemy fire | **2** |
+| Unsupported, under enemy fire | **0** |
 
 ### Visualisation
 
@@ -195,7 +204,11 @@ Units on supported tiles **regenerate 1 energy per turn even while under enemy i
 
 ## Victory
 
-A player wins when **all opponent units are destroyed**.
+A player wins when **all opponent units are destroyed**, or when **all of the opponent's bases are simultaneously occupied** by your units at the end of a turn.
+
+### Base Capture
+
+If **all of your bases** are simultaneously occupied by enemy units at the end of any turn, you lose immediately — even if you still have units on the field. Protecting your bases is as important as destroying the enemy.
 
 ---
 

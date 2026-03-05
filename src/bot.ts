@@ -1,6 +1,17 @@
 import { GameProcessor } from "./game";
 import { GameEvent } from "./events";
-import { Game, Unit, UnitId, UnitType, Player, Position, positionKey, positionsEqual } from "./domain";
+import {
+  Game,
+  Unit,
+  UnitId,
+  UnitType,
+  Player,
+  Position,
+  TileFeature,
+  ClaimType,
+  positionKey,
+  positionsEqual,
+} from "./domain";
 
 // Number of random plans sampled per bot turn.
 const SIMULATIONS = 150;
@@ -22,14 +33,12 @@ function cloneGame(game: Game): Game {
 /**
  * Score = Σ(own units) cost*(energy+condition)/(maxEnergy+maxCondition)
  *       - Σ(opponent units) same
+ *       + 1000 per enemy base occupied by own unit
+ *       - 1000 per own base occupied by enemy unit
  *
  * Higher is better for `playerId`.
  */
-function computeScore(
-  game: Game,
-  unitTypes: Map<string, UnitType>,
-  playerId: number
-): number {
+function computeScore(game: Game, unitTypes: Map<string, UnitType>, playerId: number): number {
   let score = 0;
   game.players.forEach((player) => {
     const sign = player.id === playerId ? 1 : -1;
@@ -37,9 +46,25 @@ function computeScore(
       if (unit.underConstruction) return;
       const ut = unitTypes.get(unit.typeId);
       if (!ut) return;
-      score += sign * ut.cost * (unit.energy + unit.condition) / (ut.maxEnergy + ut.maxCondition);
+      score += (sign * ut.cost * (unit.energy + unit.condition)) / (ut.maxEnergy + ut.maxCondition);
     });
   });
+
+  // Base capture scoring
+  const unitAtPos = new Map<string, number>(); // posKey → playerId
+  game.players.forEach((player) => {
+    player.units.forEach((unit) => {
+      if (!unit.underConstruction) unitAtPos.set(positionKey(unit.position), player.id);
+    });
+  });
+  game.map.bases.forEach((basePosArr, baseOwnerId) => {
+    for (const basePos of basePosArr) {
+      const occupantId = unitAtPos.get(positionKey(basePos));
+      if (occupantId === undefined || occupantId === baseOwnerId) continue;
+      score += occupantId === playerId ? 1000 : -1000;
+    }
+  });
+
   return score;
 }
 
@@ -50,6 +75,42 @@ function shuffled<T>(arr: T[]): T[] {
     [a[i], a[j]] = [a[j], a[i]];
   }
   return a;
+}
+
+/**
+ * Issue OrderBuild at every facility the current player has a Direct+Unique
+ * claim on, choosing a random affordable unit type.
+ */
+function issueBuildOrders(processor: GameProcessor, emit: (event: GameEvent) => void): void {
+  const game = processor.getGame();
+  const unitTypes = processor.getUnitTypes();
+  const playerId = game.currentPlayerId;
+
+  const capacity = processor.getUnitCapacity(playerId);
+  if (capacity === undefined) return;
+
+  const claims = processor.getClaims();
+  const allTypes = Array.from(unitTypes.values());
+
+  game.map.tiles.forEach((tile, key) => {
+    if (!tile.features.includes(TileFeature.Facility)) return;
+    const tileClaims = claims.get(key) ?? [];
+    const myClaim = tileClaims.find((c) => c.playerId === playerId);
+    const contested = tileClaims.some((c) => c.playerId !== playerId && !c.supportOnly);
+    const isDirectUnique =
+      !!myClaim && myClaim.claimType === ClaimType.Direct && !myClaim.supportOnly && !contested;
+    if (!isDirectUnique) return;
+
+    const load = processor.getUnitLoad(playerId);
+    const affordable = allTypes.filter((ut) => load + ut.cost <= capacity);
+    if (affordable.length === 0) return;
+
+    const chosen = affordable[Math.floor(Math.random() * affordable.length)];
+    processor.handle(
+      { type: "OrderBuild", facilityPosition: tile.position, unitTypeId: chosen.id },
+      emit
+    );
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -69,10 +130,7 @@ function shuffled<T>(arr: T[]): T[] {
  *      our new positions).  The score metric is evaluated on the resulting state.
  *   3. Execute the best plan on the real processor, then end the turn.
  */
-export function runBot(
-  processor: GameProcessor,
-  emit: (event: GameEvent) => void
-): void {
+export function runBot(processor: GameProcessor, emit: (event: GameEvent) => void): void {
   const game = processor.getGame();
   const unitTypes = processor.getUnitTypes();
   const features = processor.getFeatures();
@@ -113,14 +171,11 @@ export function runBot(
       // Free the unit's current position so it can "stay put" or let others through.
       occupied.delete(positionKey(unit.position));
 
-      const candidates = (validMoves.get(unit.id) ?? []).filter(
+      const candidates = [unit.position, ...(validMoves.get(unit.id) ?? [])].filter(
         (pos) => !occupied.has(positionKey(pos))
       );
 
-      const chosen =
-        candidates.length > 0
-          ? candidates[Math.floor(Math.random() * candidates.length)]
-          : unit.position;
+      const chosen = candidates[Math.floor(Math.random() * candidates.length)];
 
       plan.set(unit.id, chosen);
       occupied.add(positionKey(chosen));
@@ -155,5 +210,6 @@ export function runBot(
     }
   }
 
+  issueBuildOrders(processor, emit);
   processor.handle({ type: "EndTurn" }, emit);
 }

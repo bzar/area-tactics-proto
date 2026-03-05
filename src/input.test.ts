@@ -1,7 +1,16 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { InputProcessor } from "../src/input";
-import { GameProcessor, GameEmitter } from "../src/game";
-import { Game, Unit, UnitId, UnitType, HexGrid, EffectType, PlayerType, createPosition } from "../src/domain";
+import { GameProcessor } from "../src/game";
+import {
+  Game,
+  Unit,
+  UnitId,
+  UnitType,
+  HexGrid,
+  EffectType,
+  PlayerType,
+  createPosition,
+} from "../src/domain";
 
 function makeUnitId(id: number): UnitId {
   return id as unknown as UnitId;
@@ -26,13 +35,36 @@ function makeUnitTypes(): Map<string, UnitType> {
 // 5-wide 1-row grid; P1 unit at (0,0), P2 unit at (4,0) (out of each other's AoI)
 function makeGame(): { game: Game; p1Unit: Unit; p2Unit: Unit } {
   const grid = HexGrid.rect(5, 1);
-  const p1Unit: Unit = { id: makeUnitId(1), position: createPosition(0, 0), typeId: "infantry", playerId: 1, energy: 10, condition: 10 };
-  const p2Unit: Unit = { id: makeUnitId(2), position: createPosition(4, 0), typeId: "infantry", playerId: 2, energy: 10, condition: 10 };
+  const p1Unit: Unit = {
+    id: makeUnitId(1),
+    position: createPosition(0, 0),
+    typeId: "infantry",
+    playerId: 1,
+    energy: 10,
+    condition: 10,
+  };
+  const p2Unit: Unit = {
+    id: makeUnitId(2),
+    position: createPosition(4, 0),
+    typeId: "infantry",
+    playerId: 2,
+    energy: 10,
+    condition: 10,
+  };
   const players = new Map([
     [1, { id: 1, type: PlayerType.Human, units: new Map([[p1Unit.id, p1Unit]]) }],
     [2, { id: 2, type: PlayerType.Human, units: new Map([[p2Unit.id, p2Unit]]) }],
   ]);
-  return { game: { map: { grid, tiles: new Map(), bases: new Map() }, players, currentPlayerId: 1, turn: 1 }, p1Unit, p2Unit };
+  return {
+    game: {
+      map: { grid, tiles: new Map(), bases: new Map() },
+      players,
+      currentPlayerId: 1,
+      turn: 1,
+    },
+    p1Unit,
+    p2Unit,
+  };
 }
 
 describe("InputProcessor", () => {
@@ -48,7 +80,9 @@ describe("InputProcessor", () => {
   });
 
   it("clicking own unit selects it and emits UnitSelected with valid destinations", () => {
-    input.handle({ type: "TileDown", position: createPosition(0, 0) }, gameProcessor, (e) => emitted.push(e));
+    input.handle({ type: "TileDown", position: createPosition(0, 0) }, gameProcessor, (e) =>
+      emitted.push(e)
+    );
 
     expect(emitted.length).toBe(1);
     expect(emitted[0].type).toBe("UnitSelected");
@@ -59,14 +93,18 @@ describe("InputProcessor", () => {
   });
 
   it("clicking an opponent's unit with nothing selected does nothing", () => {
-    input.handle({ type: "TileDown", position: createPosition(4, 0) }, gameProcessor, (e) => emitted.push(e));
+    input.handle({ type: "TileDown", position: createPosition(4, 0) }, gameProcessor, (e) =>
+      emitted.push(e)
+    );
 
     expect(emitted.length).toBe(0);
     expect(input.getSelectedUnitId()).toBeNull();
   });
 
   it("clicking an empty tile with nothing selected does nothing", () => {
-    input.handle({ type: "TileDown", position: createPosition(2, 0) }, gameProcessor, (e) => emitted.push(e));
+    input.handle({ type: "TileDown", position: createPosition(2, 0) }, gameProcessor, (e) =>
+      emitted.push(e)
+    );
 
     expect(emitted.length).toBe(0);
     expect(input.getSelectedUnitId()).toBeNull();
@@ -76,7 +114,9 @@ describe("InputProcessor", () => {
     input.handle({ type: "TileDown", position: createPosition(0, 0) }, gameProcessor, () => {});
     emitted = [];
 
-    input.handle({ type: "TileDown", position: createPosition(2, 0) }, gameProcessor, (e) => emitted.push(e));
+    input.handle({ type: "TileDown", position: createPosition(2, 0) }, gameProcessor, (e) =>
+      emitted.push(e)
+    );
 
     expect(emitted.length).toBe(1);
     expect(emitted[0].type).toBe("Move");
@@ -90,7 +130,9 @@ describe("InputProcessor", () => {
     input.handle({ type: "TileDown", position: createPosition(0, 0) }, gameProcessor, () => {});
     emitted = [];
 
-    input.handle({ type: "TileDown", position: createPosition(4, 0) }, gameProcessor, (e) => emitted.push(e));
+    input.handle({ type: "TileDown", position: createPosition(4, 0) }, gameProcessor, (e) =>
+      emitted.push(e)
+    );
 
     expect(emitted.length).toBe(1);
     expect(emitted[0].type).toBe("SelectionCleared");
@@ -101,7 +143,9 @@ describe("InputProcessor", () => {
     input.handle({ type: "TileDown", position: createPosition(0, 0) }, gameProcessor, () => {});
     emitted = [];
 
-    input.handle({ type: "TileDown", position: createPosition(0, 0) }, gameProcessor, (e) => emitted.push(e));
+    input.handle({ type: "TileDown", position: createPosition(0, 0) }, gameProcessor, (e) =>
+      emitted.push(e)
+    );
 
     expect(emitted.length).toBe(1);
     expect(emitted[0].type).toBe("SelectionCleared");
@@ -111,7 +155,14 @@ describe("InputProcessor", () => {
   it("clicking a different own unit switches the selection", () => {
     // Give P1 a second unit at (3,0)
     const { game } = makeGame();
-    const extraUnit: Unit = { id: makeUnitId(3), position: createPosition(3, 0), typeId: "infantry", playerId: 1, energy: 10, condition: 10 };
+    const extraUnit: Unit = {
+      id: makeUnitId(3),
+      position: createPosition(3, 0),
+      typeId: "infantry",
+      playerId: 1,
+      energy: 10,
+      condition: 10,
+    };
     game.players.get(1)!.units.set(extraUnit.id, extraUnit);
     const gp = new GameProcessor(game, makeUnitTypes());
     const ip = new InputProcessor();
