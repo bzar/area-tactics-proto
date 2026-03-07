@@ -14,7 +14,9 @@ import {
 } from "./domain";
 
 // Number of random plans sampled per bot turn.
-const SIMULATIONS = 150;
+const SIMULATIONS = 40;
+// Number of random opponent responses to simulate per bot plan (minimax depth 1).
+const OPP_SIMS = 8;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -118,17 +120,18 @@ function issueBuildOrders(processor: GameProcessor, emit: (event: GameEvent) => 
 // ---------------------------------------------------------------------------
 
 /**
- * Plays the current player's full turn on `processor` using a shallow Monte
- * Carlo search and then ends the turn.  All GameEvents are forwarded via
- * `emit`.
+ * Plays the current player's full turn on `processor` using a one-level
+ * minimax Monte Carlo search and then ends the turn.  All GameEvents are
+ * forwarded via `emit`.
  *
  * Algorithm:
- *   1. Sample SIMULATIONS random move plans (random position per unit, respecting
- *      movement range and mutual occupancy).
- *   2. Evaluate each plan by simulating it on a game clone and calling EndTurn,
- *      which triggers start-of-next-turn damage (opponent units attack ours at
- *      our new positions).  The score metric is evaluated on the resulting state.
- *   3. Execute the best plan on the real processor, then end the turn.
+ *   1. Sample SIMULATIONS random move plans (random position per unit,
+ *      respecting movement range and mutual occupancy).
+ *   2. Evaluate each plan by simulating it on a game clone and calling EndTurn.
+ *      Then, for each plan, run OPP_SIMS random opponent responses and take the
+ *      minimum (worst-case for us) score — this is the minimax depth-1 lookahead.
+ *   3. Execute the plan with the best worst-case score on the real processor,
+ *      then end the turn.
  */
 export function runBot(processor: GameProcessor, emit: (event: GameEvent) => void): void {
   const game = processor.getGame();
@@ -151,6 +154,29 @@ export function runBot(processor: GameProcessor, emit: (event: GameEvent) => voi
     validMoves.set(unit.id, processor.getValidMovePositions(unit.id));
   }
 
+  // Keys of enemy base tiles — always included in the bot's own candidate pool so that
+  // base captures are never missed by random sampling.
+  const enemyBaseKeys = new Set<string>();
+  game.map.bases.forEach((positions, ownerId) => {
+    if (ownerId !== playerId) positions.forEach((p) => enemyBaseKeys.add(positionKey(p)));
+  });
+
+  // Build a candidate destination list for a unit.  Always includes:
+  //   • current position    (staying put is always valid)
+  //   • reachable base tiles from `priorityKeys`  (base moves are never skipped)
+  //   • all other valid moves  (for random exploration)
+  // Base tiles appear twice when they're also in validMoves, giving them higher
+  // selection probability without being fully deterministic.
+  function makeCandidates(
+    unit: Unit,
+    moves: Position[],
+    priorityKeys: Set<string>,
+    occupied: Set<string>
+  ): Position[] {
+    const priority = moves.filter((p) => priorityKeys.has(positionKey(p)));
+    return [unit.position, ...priority, ...moves].filter((p) => !occupied.has(positionKey(p)));
+  }
+
   // Baseline occupied set: opponent positions (constant during our turn).
   const opponentOccupied = new Set<string>();
   game.players.forEach((p) => {
@@ -171,8 +197,11 @@ export function runBot(processor: GameProcessor, emit: (event: GameEvent) => voi
       // Free the unit's current position so it can "stay put" or let others through.
       occupied.delete(positionKey(unit.position));
 
-      const candidates = [unit.position, ...(validMoves.get(unit.id) ?? [])].filter(
-        (pos) => !occupied.has(positionKey(pos))
+      const candidates = makeCandidates(
+        unit,
+        validMoves.get(unit.id) ?? [],
+        enemyBaseKeys,
+        occupied
       );
 
       const chosen = candidates[Math.floor(Math.random() * candidates.length)];
@@ -181,8 +210,7 @@ export function runBot(processor: GameProcessor, emit: (event: GameEvent) => voi
       occupied.add(positionKey(chosen));
     }
 
-    // Simulate this plan: clone the game, apply moves, call EndTurn (which
-    // triggers damage from opponent units at their current positions).
+    // Simulate this plan on a clone: apply moves then EndTurn.
     const clone = cloneGame(game);
     const sim_proc = new GameProcessor(clone, unitTypes, features);
     const noop = () => {};
@@ -193,7 +221,61 @@ export function runBot(processor: GameProcessor, emit: (event: GameEvent) => voi
     }
     sim_proc.handle({ type: "EndTurn" }, noop);
 
-    const score = computeScore(sim_proc.getGame(), unitTypes, playerId);
+    // Minimax depth-1: simulate OPP_SIMS random opponent responses and take
+    // the worst-case score (minimum for us = best for the opponent).
+    const midGame = sim_proc.getGame();
+    const oppId = midGame.currentPlayerId;
+    const oppPlayer = midGame.players.get(oppId);
+    const oppUnits = oppPlayer
+      ? Array.from(oppPlayer.units.values()).filter((u) => !u.underConstruction)
+      : [];
+
+    // Pre-compute opponent valid moves from this mid-game state.
+    const oppValidMoves = new Map<UnitId, Position[]>();
+    for (const u of oppUnits) {
+      oppValidMoves.set(u.id, sim_proc.getValidMovePositions(u.id));
+    }
+
+    // Keys of bot's own base tiles — always included in opponent candidate pool so that
+    // base-capture threats are never missed by random sampling.
+    const botBaseKeys = new Set<string>();
+    midGame.map.bases.forEach((positions, ownerId) => {
+      if (ownerId !== oppId) positions.forEach((p) => botBaseKeys.add(positionKey(p)));
+    });
+
+    // Positions held by our (bot) units after our moves — opponent can't step there.
+    const botOccupied = new Set<string>();
+    midGame.players.forEach((p) => {
+      if (p.id !== oppId) p.units.forEach((u) => botOccupied.add(positionKey(u.position)));
+    });
+
+    let worstScore = Infinity;
+    for (let oppSim = 0; oppSim < OPP_SIMS; oppSim++) {
+      const oppOccupied = new Set<string>(botOccupied);
+      const oppClone = cloneGame(midGame);
+      const oppProc = new GameProcessor(oppClone, unitTypes, features);
+
+      for (const unit of shuffled(oppUnits)) {
+        oppOccupied.delete(positionKey(unit.position));
+        const candidates = makeCandidates(
+          unit,
+          oppValidMoves.get(unit.id) ?? [],
+          botBaseKeys,
+          oppOccupied
+        );
+        const dest = candidates[Math.floor(Math.random() * candidates.length)];
+        oppOccupied.add(positionKey(dest));
+        if (!positionsEqual(dest, unit.position)) {
+          oppProc.handle({ type: "Move", unitId: unit.id, position: dest }, noop);
+        }
+      }
+      oppProc.handle({ type: "EndTurn" }, noop);
+
+      const s = computeScore(oppProc.getGame(), unitTypes, playerId);
+      if (s < worstScore) worstScore = s;
+    }
+
+    const score = oppUnits.length > 0 ? worstScore : computeScore(midGame, unitTypes, playerId);
     if (score > bestScore) {
       bestScore = score;
       bestPlan = new Map(plan);

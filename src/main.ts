@@ -387,6 +387,47 @@ function drawRelations() {
       });
     });
   });
+
+  // --- Attack lines ---
+  // For each unit with a direct attack, draw an angular line to each target it
+  // would hit at the start of its player's next turn.
+  // The line is: A → P1 → P2 → B, where P1/P2 offset at 45° keep the "curve"
+  // always on the left side of the A→B direction (top for rightward, right for downward).
+  const influences = gameProcessor.getInfluences();
+  const allUnitsById = new Map<UnitId, Unit>();
+  game.players.forEach((player) => player.units.forEach((u) => allUnitsById.set(u.id, u)));
+
+  game.players.forEach((player) => {
+    const attackColor = player.id === 1 ? C.p1 : C.p2;
+    player.units.forEach((attacker) => {
+      if (attacker.underConstruction) return;
+      const ut = unitTypes.get(attacker.typeId);
+      if (!ut || ut.power === 0) return;
+
+      const [ax, ay] = hexCenter(attacker.position.q, attacker.position.r);
+
+      influences.getUnitsInfluencedBy(attacker.id).forEach((targetId) => {
+        const target = allUnitsById.get(targetId);
+        if (!target || target.playerId === player.id || target.underConstruction) return;
+
+        const [bx, by] = hexCenter(target.position.q, target.position.r);
+        const dx = bx - ax;
+        const dy = by - ay;
+        const len = Math.sqrt(dx * dx + dy * dy);
+        if (len < 0.001) return;
+
+        // Offset both endpoints 10% of hex size to the left of travel.
+        // Left in screen coords (y-down): (fy, -fx)
+        const off = (HEX_SIZE * 0.1) / len;
+        const ox = dy * off;
+        const oy = -dx * off;
+
+        relationsGfx.lineStyle(2, attackColor, 0.75);
+        relationsGfx.moveTo(ax + ox, ay + oy);
+        relationsGfx.lineTo(bx + ox, by + oy);
+      });
+    });
+  });
 }
 
 function render() {

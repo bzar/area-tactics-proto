@@ -5,7 +5,7 @@ import { GameEvent } from "../src/events";
 import { loadMap, createGameFromMap, defaultUnitTypes } from "../src/maps";
 
 describe("runBot", () => {
-  it("smoke test: both sides play 10 rounds without throwing", { timeout: 15000 }, () => {
+  it("smoke test: both sides play 10 rounds without throwing", { timeout: 30000 }, () => {
     const unitTypes = defaultUnitTypes();
     const mapDef = loadMap("test");
     const game = createGameFromMap(mapDef, unitTypes);

@@ -155,6 +155,7 @@ export class GameProcessor {
 
     unit.position = destination;
     emit({ type: "UnitMoved", unit: unitRef(unit), position: destination });
+    this.recalculateInfluences();
     return { ok: true };
   }
 
