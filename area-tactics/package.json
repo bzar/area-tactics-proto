@@ -1,0 +1,14 @@
+{
+  "name": "area-tactics",
+  "version": "1.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "vitest": "*"
+  }
+}

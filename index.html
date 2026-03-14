@@ -168,6 +168,45 @@
     }
     #ticker .t-line { white-space: pre; }
     #ticker .t-sep { border-top: 1px solid #334466; margin: 3px 0; }
+    /* ── lobby ── */
+    #lby-panel { min-width: 340px; max-width: 460px; width: 100%; display: flex; flex-direction: column; gap: 0; }
+    .lby-field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
+    .lby-label { font-size: 11px; color: #7799bb; text-transform: uppercase; letter-spacing: .06em; }
+    .lby-input {
+      background: rgba(255,255,255,0.07); border: 1px solid #334466;
+      color: #ddeeff; font: 15px sans-serif; padding: 7px 10px; border-radius: 4px;
+      outline: none; width: 100%;
+    }
+    .lby-input:focus { border-color: #5577aa; }
+    .lby-btns { display: flex; gap: 8px; margin-top: 4px; }
+    .lby-btn {
+      flex: 1; padding: 9px 16px; font: bold 14px sans-serif;
+      background: #1e3a5a; color: #ddeeff; border: 1px solid #5577aa;
+      border-radius: 5px; cursor: pointer;
+    }
+    .lby-btn:hover:not(:disabled) { background: #2a4d75; }
+    .lby-btn:disabled { opacity: .35; cursor: not-allowed; }
+    .lby-btn-sm {
+      padding: 6px 14px; font: 13px sans-serif;
+      background: rgba(255,255,255,0.06); color: #aabbcc;
+      border: 1px solid #334466; border-radius: 4px; cursor: pointer;
+    }
+    .lby-btn-sm:hover { background: rgba(255,255,255,0.1); }
+    .lby-games-hdr { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 13px; color: #7799bb; }
+    .lby-game-list { max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
+    .lby-game-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 10px; background: rgba(255,255,255,0.04); border-radius: 4px; border: 1px solid #2a3a52; }
+    .lby-game-info { display: flex; gap: 8px; align-items: center; font-size: 13px; min-width: 0; }
+    .lby-g-map { color: #ddeeff; }
+    .lby-g-status { font-size: 11px; padding: 1px 6px; border-radius: 3px; }
+    .lby-g-status.waiting { background: #2a4d1a; color: #88cc66; }
+    .lby-g-status.active  { background: #1a2f6e; color: #5588ff; }
+    .lby-g-status.ended   { background: #2a2a2a; color: #667788; }
+    .lby-g-id { color: #556677; font: 11px monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 80px; }
+    .lby-g-mine { font-size: 11px; color: #5588ff; background: rgba(51,102,238,0.2); padding: 1px 6px; border-radius: 3px; }
+    .lby-empty { color: #445566; font-size: 13px; padding: 14px; text-align: center; }
+    .lby-gid { display: block; font: 13px monospace; background: rgba(255,255,255,0.07); border: 1px solid #334466; padding: 8px 12px; border-radius: 4px; word-break: break-all; color: #aaccff; }
+    .lby-status-msg { min-height: 18px; font-size: 12px; color: #88aabb; margin-top: 8px; }
+    .lby-status-msg.err { color: #ff7777; }
   </style>
 </head>
 <body>
@@ -219,11 +258,15 @@
       <h3>Mode</h3>
       <div class="map-option">
         <input type="radio" name="mode" id="mode-hvh" value="hvh" checked />
-        <label for="mode-hvh">Human vs Human</label>
+        <label for="mode-hvh">Human vs Human (local)</label>
       </div>
       <div class="map-option">
         <input type="radio" name="mode" id="mode-hva" value="hva" />
         <label for="mode-hva">Human vs AI</label>
+      </div>
+      <div class="map-option">
+        <input type="radio" name="mode" id="mode-online" value="online" />
+        <label for="mode-online">Online Multiplayer</label>
       </div>
     </div>
 
@@ -257,6 +300,74 @@
     <button id="start-btn">Start Game</button>
   </div>
 
+  <script src="/config.js"></script>
   <script type="module" src="/src/main.ts"></script>
+
+  <!-- Online lobby overlay -->
+  <div id="lobby" class="overlay" style="z-index:25">
+    <div class="ng-panel" id="lby-panel">
+      <h3>ONLINE MULTIPLAYER</h3>
+
+      <!-- Auth section -->
+      <div id="lby-auth">
+        <div class="lby-field">
+          <label class="lby-label">Server URL</label>
+          <input id="lby-url" type="text" class="lby-input" />
+        </div>
+        <div class="lby-field">
+          <label class="lby-label">Username</label>
+          <input id="lby-user" type="text" class="lby-input" autocomplete="username" />
+        </div>
+        <div class="lby-field">
+          <label class="lby-label">Password</label>
+          <input id="lby-pass" type="password" class="lby-input" autocomplete="current-password" />
+        </div>
+        <div class="lby-btns">
+          <button id="lby-login-btn" class="lby-btn">Login</button>
+          <button id="lby-register-btn" class="lby-btn">Register</button>
+        </div>
+      </div>
+
+      <!-- Game list section -->
+      <div id="lby-games" style="display:none">
+        <div class="lby-games-hdr">
+          <span>Games</span>
+          <button id="lby-refresh-btn" class="lby-btn-sm">↻ Refresh</button>
+        </div>
+        <div id="lby-game-list" class="lby-game-list"></div>
+        <button id="lby-new-game-btn" class="lby-btn" style="width:100%;margin-top:10px">+ New Game</button>
+      </div>
+
+      <!-- Create game section -->
+      <div id="lby-create" style="display:none">
+        <h3 style="margin-bottom:8px">Map</h3>
+        <div id="lby-map-opts"></div>
+        <h3 style="margin-top:12px;margin-bottom:8px">Features</h3>
+        <div class="feature-option">
+          <input type="checkbox" id="lby-f-support" checked />
+          <label for="lby-f-support">Support</label>
+        </div>
+        <div class="feature-option">
+          <input type="checkbox" id="lby-f-flanking" />
+          <label for="lby-f-flanking">Flanking</label>
+        </div>
+        <div class="lby-btns" style="margin-top:14px">
+          <button id="lby-create-confirm" class="lby-btn">Create</button>
+          <button id="lby-create-back" class="lby-btn-sm">Back</button>
+        </div>
+      </div>
+
+      <!-- Waiting for opponent section -->
+      <div id="lby-waiting" style="display:none">
+        <p style="color:#aabbcc;margin-bottom:12px">Waiting for opponent to join…</p>
+        <p class="lby-label" style="margin-bottom:6px">Share this game ID with your opponent:</p>
+        <code id="lby-gid-text" class="lby-gid"></code>
+        <button id="lby-copy-btn" class="lby-btn-sm" style="margin-top:8px">Copy ID</button>
+      </div>
+
+      <div id="lby-status" class="lby-status-msg"></div>
+      <button id="lby-back-btn" class="lby-btn-sm" style="margin-top:6px;opacity:0.6">← Back to Menu</button>
+    </div>
+  </div>
 </body>
 </html>

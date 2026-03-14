@@ -1,5 +1,5 @@
-import { GameProcessor } from "./game";
-import { GameEvent } from "./events";
+import { GameProcessor } from "area-tactics";
+import { GameEvent } from "area-tactics";
 import {
   Game,
   Unit,
@@ -11,7 +11,7 @@ import {
   ClaimType,
   positionKey,
   positionsEqual,
-} from "./domain";
+} from "area-tactics";
 
 // Number of random plans sampled per bot turn.
 const SIMULATIONS = 40;

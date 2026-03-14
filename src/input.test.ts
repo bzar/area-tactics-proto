@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { InputProcessor } from "../src/input";
-import { GameProcessor } from "../src/game";
+import { GameProcessor } from "area-tactics";
 import {
   Game,
   Unit,
@@ -10,7 +10,7 @@ import {
   EffectType,
   PlayerType,
   createPosition,
-} from "../src/domain";
+} from "area-tactics";
 
 function makeUnitId(id: number): UnitId {
   return id as unknown as UnitId;

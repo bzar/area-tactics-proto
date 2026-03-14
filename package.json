@@ -3,6 +3,10 @@
   "version": "1.0.0",
   "type": "module",
   "main": "index.js",
+  "workspaces": [
+    "area-tactics",
+    "server"
+  ],
   "scripts": {
     "test": "vitest run",
     "dev": "vite",
@@ -31,6 +35,7 @@
     "vitest": "^3.2.4"
   },
   "dependencies": {
+    "area-tactics": "*",
     "pixi.js": "^7.4.3"
   }
 }

@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { runBot } from "../src/bot";
-import { GameProcessor } from "../src/game";
-import { GameEvent } from "../src/events";
-import { loadMap, createGameFromMap, defaultUnitTypes } from "../src/maps";
+import { GameProcessor } from "area-tactics";
+import { GameEvent } from "area-tactics";
+import { loadMap, createGameFromMap, defaultUnitTypes } from "area-tactics";
 
 describe("runBot", () => {
   it("smoke test: both sides play 10 rounds without throwing", { timeout: 30000 }, () => {

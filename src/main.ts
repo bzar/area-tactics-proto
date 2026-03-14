@@ -1,8 +1,8 @@
 import * as PIXI from "pixi.js";
-import { loadMap, listMaps, defaultUnitTypes, createGameFromMap } from "./maps";
-import { GameProcessor, GameFeatures } from "./game";
+import { loadMap, listMaps, defaultUnitTypes, createGameFromMap } from "area-tactics";
+import { GameProcessor, GameFeatures } from "area-tactics";
 import { InputProcessor } from "./input";
-import { ActionEvent, GameEvent, UnitRef } from "./events";
+import { ActionEvent, GameEvent, UnitRef } from "area-tactics";
 import {
   createPosition,
   positionKey,
@@ -12,8 +12,10 @@ import {
   TileFeature,
   ClaimType,
   PlayerType,
-} from "./domain";
+} from "area-tactics";
 import { runBot } from "./bot";
+import { OnlineClient, DEFAULT_SERVER_URL, gameProcessorFromServerState } from "./online";
+import type { GameListEntry, MapListEntry } from "./online";
 
 // ============================================================================
 // Hex math — flat-top orientation
@@ -238,6 +240,12 @@ function freshGame(mapName: string, features: GameFeatures = { support: false },
 
 let { game, gameProcessor, inputProcessor } = freshGame("test");
 let gameIsOver = false;
+let onlineClient: OnlineClient | null = null;
+let myGamePlayerId: number | null = null;
+
+function isMyTurn(): boolean {
+  return !onlineClient || myGamePlayerId === game.currentPlayerId;
+}
 let selectedUnitId: UnitId | null = null;
 let validDests: Array<[number, number]> = [];
 let hoveredPos: { q: number; r: number } | null = null;
@@ -595,9 +603,16 @@ function render() {
 
 function updateHUD() {
   const currentPlayer = game.players.get(game.currentPlayerId);
-  const label = currentPlayer?.type === PlayerType.AI ? "AI" : `Player ${game.currentPlayerId}`;
+  let label: string;
+  if (onlineClient) {
+    label = isMyTurn() ? "Your turn" : "Opponent's turn";
+  } else {
+    label = currentPlayer?.type === PlayerType.AI ? "AI" : `Player ${game.currentPlayerId}`;
+  }
   (document.getElementById("turn-display") as HTMLElement).textContent =
     `Turn ${game.turn}  —  ${label}`;
+  (document.getElementById("end-turn-btn") as HTMLButtonElement).disabled =
+    !!onlineClient && !isMyTurn();
   game.players.forEach((player) => {
     const load = gameProcessor.getUnitLoad(player.id);
     const cap = gameProcessor.getUnitCapacity(player.id);
@@ -653,6 +668,7 @@ let buildDialogPos: { q: number; r: number } | null = null;
 let buildDialogSelectedType: string | null = null;
 
 function isBuildableFacility(pos: { q: number; r: number }): boolean {
+  if (!isMyTurn()) return false;
   const key = positionKey(pos);
   const tile = game.map.tiles.get(key);
   if (!tile?.features.includes(TileFeature.Facility)) return false;
@@ -774,14 +790,14 @@ document.getElementById("build-dialog")!.addEventListener("click", (e) => {
 document.getElementById("build-confirm-btn")!.addEventListener("click", () => {
   if (!buildDialogPos || !buildDialogSelectedType) return;
   const pos = createPosition(buildDialogPos.q, buildDialogPos.r);
-  gameProcessor.handle(
-    { type: "OrderBuild", facilityPosition: pos, unitTypeId: buildDialogSelectedType },
-    (e) => {
-      logGameEvent(e);
-    }
-  );
-  updateHUD();
-  render();
+  const action: ActionEvent = { type: "OrderBuild", facilityPosition: pos, unitTypeId: buildDialogSelectedType };
+  if (onlineClient) {
+    onlineClient.sendAction(action);
+  } else {
+    gameProcessor.handle(action, (e) => { logGameEvent(e); });
+    updateHUD();
+    render();
+  }
   closeBuildDialog();
 });
 
@@ -797,7 +813,11 @@ function processActions(actions: ActionEvent[]) {
     } else if (action.type === "SelectionCleared") {
       selectedUnitId = null;
       validDests = [];
-    } else if (action.type === "Move" || action.type === "EndTurn") {
+    } else if (onlineClient) {
+      selectedUnitId = null;
+      validDests = [];
+      onlineClient.sendAction(action);
+    } else {
       selectedUnitId = null;
       validDests = [];
       gameProcessor.handle(action, (e) => {
@@ -808,11 +828,11 @@ function processActions(actions: ActionEvent[]) {
         }
       });
       updateHUD();
+      scheduleBotIfAI();
     }
   }
   render();
   updateUnitInfo();
-  scheduleBotIfAI();
 }
 
 /** If the current player is an AI, run the bot after a brief render delay. */
@@ -845,11 +865,69 @@ function scheduleBotIfAI() {
 function showNewGame() {
   document.getElementById("game-over")!.classList.remove("visible");
   document.getElementById("new-game")!.classList.add("visible");
+  if (onlineClient) {
+    onlineClient.disconnect();
+    onlineClient = null;
+    myGamePlayerId = null;
+  }
 }
 
 function showGameOver(winnerId: number) {
-  document.getElementById("winner-text")!.textContent = `Player ${winnerId} wins!`;
+  const label = onlineClient
+    ? winnerId === myGamePlayerId ? "You win!" : "You lose."
+    : `Player ${winnerId} wins!`;
+  document.getElementById("winner-text")!.textContent = label;
   document.getElementById("game-over")!.classList.add("visible");
+}
+
+// ============================================================================
+// Online game — server message handler
+// ============================================================================
+
+function handleServerMessage(msg: any): void {
+  if (msg.type === "Connected") {
+    onlineClient!.requestState();
+    return;
+  }
+  if (msg.type === "GameState") {
+    const result = gameProcessorFromServerState(msg);
+    gameProcessor = result.processor;
+    game = result.processor.getGame();
+    myGamePlayerId = result.myGamePlayerId;
+    gameIsOver = false;
+    selectedUnitId = null;
+    validDests = [];
+    inputProcessor = new InputProcessor();
+    document.getElementById("lobby")!.classList.remove("visible");
+    document.getElementById("new-game")!.classList.remove("visible");
+    tickerClear();
+    world.x = 0;
+    world.y = 0;
+    updateHUD();
+    render();
+    updateUnitInfo();
+    return;
+  }
+  if (msg.type === "Error") {
+    console.warn("Server:", msg.message);
+    return;
+  }
+  // It's a GameEvent — apply and refresh UI
+  const event = msg as GameEvent;
+  logGameEvent(event);
+  gameProcessor.applyEvent(event);
+  if (event.type === "GameEnded") {
+    gameIsOver = true;
+    showGameOver(event.winnerId);
+  }
+  if (event.type === "TurnStarted") {
+    selectedUnitId = null;
+    validDests = [];
+    inputProcessor.clearSelection();
+  }
+  updateHUD();
+  render();
+  updateUnitInfo();
 }
 
 // ============================================================================
@@ -911,28 +989,33 @@ canvas.addEventListener("pointerup", (e) => {
       // influence highlights and the unit info box reflect the tapped tile.
       hoveredPos = { q, r };
 
-      const key = positionKey(pos);
-      const hasBuildableUnit = Array.from(game.players.values()).some((p) =>
-        Array.from(p.units.values()).some(
-          (u) => positionKey(u.position) === key && !u.underConstruction
-        )
-      );
-      const isValidMoveDest =
-        selectedUnitId !== null && validDests.some(([dq, dr]) => dq === q && dr === r);
-
-      if (!isValidMoveDest && !hasBuildableUnit && isBuildableFacility(pos)) {
-        // Clear any pending unit selection before opening dialog
-        inputProcessor.clearSelection();
-        selectedUnitId = null;
-        validDests = [];
+      if (!isMyTurn()) {
         render();
-        openBuildDialog(pos);
+        updateUnitInfo();
       } else {
-        const actions: ActionEvent[] = [];
-        inputProcessor.handle({ type: "TileDown", position: pos }, gameProcessor, (a) =>
-          actions.push(a)
+        const key = positionKey(pos);
+        const hasBuildableUnit = Array.from(game.players.values()).some((p) =>
+          Array.from(p.units.values()).some(
+            (u) => positionKey(u.position) === key && !u.underConstruction
+          )
         );
-        processActions(actions);
+        const isValidMoveDest =
+          selectedUnitId !== null && validDests.some(([dq, dr]) => dq === q && dr === r);
+
+        if (!isValidMoveDest && !hasBuildableUnit && isBuildableFacility(pos)) {
+          // Clear any pending unit selection before opening dialog
+          inputProcessor.clearSelection();
+          selectedUnitId = null;
+          validDests = [];
+          render();
+          openBuildDialog(pos);
+        } else {
+          const actions: ActionEvent[] = [];
+          inputProcessor.handle({ type: "TileDown", position: pos }, gameProcessor, (a) =>
+            actions.push(a)
+          );
+          processActions(actions);
+        }
       }
     }
   }
@@ -941,6 +1024,7 @@ canvas.addEventListener("pointerup", (e) => {
 });
 
 document.getElementById("end-turn-btn")!.addEventListener("click", () => {
+  if (!isMyTurn()) return;
   const actions: ActionEvent[] = [];
   inputProcessor.handle({ type: "EndTurn" }, gameProcessor, (a) => actions.push(a));
   processActions(actions);
@@ -959,14 +1043,24 @@ listMaps().forEach(({ name, label }, i) => {
 });
 
 document.getElementById("start-btn")!.addEventListener("click", () => {
+  const modeVal =
+    (document.querySelector('input[name="mode"]:checked') as HTMLInputElement)?.value ?? "hvh";
+
+  if (modeVal === "online") {
+    (document.getElementById("lby-url") as HTMLInputElement).value = DEFAULT_SERVER_URL;
+    document.getElementById("new-game")!.classList.remove("visible");
+    document.getElementById("lobby")!.classList.add("visible");
+    lobbyShowSection("auth");
+    return;
+  }
+
   const selected =
     (document.querySelector('input[name="map"]:checked') as HTMLInputElement)?.value ?? "test";
   const features: GameFeatures = {
     support: (document.getElementById("f-support") as HTMLInputElement).checked,
     flanking: (document.getElementById("f-flanking") as HTMLInputElement).checked,
   };
-  const p2IsAI =
-    (document.querySelector('input[name="mode"]:checked') as HTMLInputElement)?.value === "hva";
+  const p2IsAI = modeVal === "hva";
   ({ game, gameProcessor, inputProcessor } = freshGame(selected, features, p2IsAI));
   gameIsOver = false;
   selectedUnitId = null;
@@ -989,4 +1083,166 @@ window.addEventListener("resize", () => {
     HEX_SIZE = newSize;
     render();
   }
+});
+
+// ============================================================================
+// Online Lobby
+// ============================================================================
+
+let lobbyClient: OnlineClient | null = null;
+let lobbyCreatedGameId: string | null = null;
+
+function lobbyShowSection(section: "auth" | "games" | "create" | "waiting") {
+  for (const id of ["auth", "games", "create", "waiting"]) {
+    const el = document.getElementById(`lby-${id}`);
+    if (el) el.style.display = id === section ? "" : "none";
+  }
+  document.getElementById("lby-status")!.textContent = "";
+  document.getElementById("lby-status")!.className = "lby-status-msg";
+}
+
+function lobbyStatus(msg: string, isError = false) {
+  const el = document.getElementById("lby-status")!;
+  el.textContent = msg;
+  el.className = "lby-status-msg" + (isError ? " err" : "");
+}
+
+async function lobbyDoAuth(register: boolean) {
+  const url = (document.getElementById("lby-url") as HTMLInputElement).value.trim() || DEFAULT_SERVER_URL;
+  const username = (document.getElementById("lby-user") as HTMLInputElement).value.trim();
+  const password = (document.getElementById("lby-pass") as HTMLInputElement).value;
+  if (!username || !password) { lobbyStatus("Enter username and password.", true); return; }
+
+  lobbyClient = new OnlineClient(url);
+  lobbyStatus(register ? "Registering…" : "Logging in…");
+  try {
+    if (register) await lobbyClient.register(username, password);
+    else await lobbyClient.login(username, password);
+    lobbyStatus("");
+    await lobbyLoadGames();
+    lobbyShowSection("games");
+  } catch (e: any) {
+    lobbyStatus(e.message ?? "Failed", true);
+  }
+}
+
+async function lobbyLoadGames() {
+  lobbyStatus("Loading games…");
+  try {
+    const games = await lobbyClient!.listGames();
+    lobbyStatus("");
+    const el = document.getElementById("lby-game-list")!;
+    el.innerHTML = "";
+    if (games.length === 0) {
+      el.innerHTML = '<div class="lby-empty">No games found</div>';
+      return;
+    }
+    for (const g of games as GameListEntry[]) {
+      const isMine = g.my_slot != null;
+      const canJoin = !isMine && g.status === "waiting";
+      const row = document.createElement("div");
+      row.className = "lby-game-row";
+      row.innerHTML = `
+        <div class="lby-game-info">
+          <span class="lby-g-map">${g.map_name}</span>
+          <span class="lby-g-status ${g.status}">${g.status}</span>
+          <span class="lby-g-id">${g.id}</span>
+          ${isMine ? `<span class="lby-g-mine">P${g.my_slot}</span>` : ""}
+        </div>
+        <button class="lby-btn-sm">${isMine ? "Resume" : canJoin ? "Join" : "—"}</button>
+      `;
+      const btn = row.querySelector("button") as HTMLButtonElement;
+      if (!isMine && !canJoin) {
+        btn.disabled = true;
+      } else {
+        btn.addEventListener("click", () => lobbyJoin(g.id, isMine));
+      }
+      el.appendChild(row);
+    }
+  } catch (e: any) {
+    lobbyStatus(e.message ?? "Failed to load games", true);
+  }
+}
+
+async function lobbyJoin(gameId: string, alreadyIn: boolean) {
+  lobbyStatus("Joining…");
+  try {
+    if (!alreadyIn) await lobbyClient!.joinGame(gameId);
+    lobbyStatus("Connecting…");
+    lobbyConnect(gameId);
+  } catch (e: any) {
+    lobbyStatus(e.message ?? "Join failed", true);
+  }
+}
+
+function lobbyConnect(gameId: string) {
+  onlineClient = lobbyClient;
+  lobbyClient!.connect(gameId, handleServerMessage, () => {
+    if (onlineClient) {
+      onlineClient = null;
+      myGamePlayerId = null;
+      lobbyStatus("Disconnected from server.", true);
+      document.getElementById("lobby")!.classList.add("visible");
+      document.getElementById("new-game")!.classList.remove("visible");
+      lobbyShowSection("games");
+      lobbyLoadGames();
+    }
+  });
+}
+
+async function lobbyShowCreate() {
+  lobbyShowSection("create");
+  const el = document.getElementById("lby-map-opts")!;
+  el.innerHTML = "";
+  try {
+    const maps = await lobbyClient!.listMaps() as MapListEntry[];
+    maps.forEach(({ name, label }, i) => {
+      el.innerHTML +=
+        `<div class="map-option">` +
+        `<input type="radio" name="lby-map" id="lby-map-${name}" value="${name}" ${i === 0 ? "checked" : ""} />` +
+        `<label for="lby-map-${name}">${label}</label></div>`;
+    });
+  } catch {
+    el.innerHTML = '<div class="lby-empty">Failed to load maps</div>';
+  }
+}
+
+async function lobbyCreateGame() {
+  const mapName =
+    (document.querySelector('input[name="lby-map"]:checked') as HTMLInputElement)?.value ?? "small";
+  const features: GameFeatures = {
+    support: (document.getElementById("lby-f-support") as HTMLInputElement).checked,
+    flanking: (document.getElementById("lby-f-flanking") as HTMLInputElement).checked,
+  };
+  lobbyStatus("Creating game…");
+  try {
+    const { id } = await lobbyClient!.createGame(mapName, features);
+    lobbyCreatedGameId = id;
+    (document.getElementById("lby-gid-text") as HTMLElement).textContent = id;
+    lobbyShowSection("waiting");
+    lobbyConnect(id);
+  } catch (e: any) {
+    lobbyStatus(e.message ?? "Failed to create game", true);
+  }
+}
+
+// Lobby event bindings
+document.getElementById("lby-login-btn")!.addEventListener("click", () => lobbyDoAuth(false));
+document.getElementById("lby-register-btn")!.addEventListener("click", () => lobbyDoAuth(true));
+document.getElementById("lby-pass")!.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") lobbyDoAuth(false);
+});
+document.getElementById("lby-refresh-btn")!.addEventListener("click", lobbyLoadGames);
+document.getElementById("lby-new-game-btn")!.addEventListener("click", lobbyShowCreate);
+document.getElementById("lby-create-confirm")!.addEventListener("click", lobbyCreateGame);
+document.getElementById("lby-create-back")!.addEventListener("click", () => lobbyShowSection("games"));
+document.getElementById("lby-copy-btn")!.addEventListener("click", () => {
+  const id = (document.getElementById("lby-gid-text") as HTMLElement).textContent ?? "";
+  navigator.clipboard.writeText(id).catch(() => {});
+});
+document.getElementById("lby-back-btn")!.addEventListener("click", () => {
+  document.getElementById("lobby")!.classList.remove("visible");
+  document.getElementById("new-game")!.classList.add("visible");
+  if (onlineClient) { onlineClient.disconnect(); onlineClient = null; myGamePlayerId = null; }
+  lobbyClient = null;
 });

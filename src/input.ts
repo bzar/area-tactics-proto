@@ -1,6 +1,6 @@
-import { UnitId, Position, positionsEqual } from "./domain";
-import { ActionEvent } from "./events";
-import { GameProcessor } from "./game";
+import { UnitId, Position, positionsEqual } from "area-tactics";
+import { ActionEvent } from "area-tactics";
+import { GameProcessor } from "area-tactics";
 
 // ============================================================================
 // Input Events - Tile-coordinate user input within the game's context
