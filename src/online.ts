@@ -23,7 +23,13 @@ function resolveDefaultServerUrl(): string {
   }
   const buildTime = (import.meta.env as Record<string, string | undefined>).VITE_SERVER_URL;
   if (buildTime) return buildTime;
-  if (typeof window !== "undefined") return window.location.origin;
+  if (typeof window !== "undefined") {
+    // Derive the app base from the current page URL so subdirectory proxy
+    // setups (e.g. "location /game/ { proxy_pass ...; }") work correctly.
+    const p = window.location.pathname;
+    const dir = p.endsWith("/") ? p.slice(0, -1) : p.replace(/\/[^/]*$/, "");
+    return window.location.origin + dir;
+  }
   return "http://localhost:3000";
 }
 
