@@ -14,7 +14,7 @@ The map is a hex grid that can be panned by clicking and dragging. It contains:
 
 | Feature | Symbol | Description |
 |---------|--------|-------------|
-| **Base** | ★ (star) | Starting position; anchors territory claims |
+| **Base** | ★ (star) | Starting position; anchors territory claims and support chains |
 | **Depot** | ▬ (rectangle) | Expands unit capacity when claimed |
 | **Facility** | ⬡ (hexagon) | Allows building new units when claimed |
 
@@ -85,11 +85,11 @@ Combat is automatic — you do not issue attack orders.
 
 ### Split Damage
 
-If a unit has **multiple enemies** in its AoI at the same time, its power is **halved** (rounded down) for each target. Spreading your units out helps avoid this.
+If a unit has **multiple enemies** in its AoI at the same time, its power is **halved** (rounded down) **against each target individually** — every targeted enemy takes the same reduced damage.
 
 ### Flanking *(optional feature)*
 
-If an enemy unit is influenced by **two or more of your units from different angles** (one influencing unit does not influence the other), the damage is increased by **50%** (rounded down).
+If an enemy unit is damaged by **two or more of your units that do not influence each other** (i.e. they are out of each other's AoI), the damage is increased by **50%** (rounded down). A unit with a large AoI — such as a Mortar — can create a flanking angle on its own if it reaches the enemy from a range outside the other attacker's AoI.
 
 Split damage and flanking cancel each other out.
 

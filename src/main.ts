@@ -8,6 +8,7 @@ import {
   positionKey,
   UnitId,
   Unit,
+  Position,
   EffectType,
   TileFeature,
   ClaimType,
@@ -116,11 +117,12 @@ const C = {
   validMove: 0x1a4d2e,
   selected: 0x4d3a00,
   p1: 0x3366ee,
-  p2: 0xdd3333,
+  p2: 0xee7722,   // orange — blue/orange pair is accessible for all colorblindness types
   selectRing: 0xffcc00,
   influenceRing: 0xffffaa,
-  energy: 0x2255ee,
-  condition: 0xdd2222,
+  tickerHighlight: 0xffffff,
+  energy: 0x00ccee,    // cyan  — visually distinct from player blue/orange
+  condition: 0x44cc55, // green — visually distinct from cyan; universal health-bar convention
   barBg: 0x111827,
 };
 
@@ -142,7 +144,7 @@ const CLAIMED_CONTESTED =
 
 const PLAYER_CSS: Record<number, string> = {
   1: "#5588ff",
-  2: "#ff5555",
+  2: "#ff9944",
 };
 
 // ============================================================================
@@ -151,16 +153,34 @@ const PLAYER_CSS: Record<number, string> = {
 
 const tickerEl = document.getElementById("ticker")!;
 
+// Units highlighted when hovering a ticker line, keyed by UnitId.
+// For destroyed units we show a ghost ring at their last known position.
+const tickerHighlightedUnits = new Set<UnitId>();
+const lastKnownPos = new Map<UnitId, Position>();
+
+tickerEl.addEventListener("mouseover", (e) => {
+  const line = (e.target as Element).closest(".t-line") as HTMLElement | null;
+  tickerHighlightedUnits.clear();
+  const ids = line?.dataset.units;
+  if (ids) ids.split(",").forEach((s) => tickerHighlightedUnits.add(Number(s) as UnitId));
+  render();
+});
+tickerEl.addEventListener("mouseleave", () => {
+  tickerHighlightedUnits.clear();
+  render();
+});
+
 function unitSpan(ref: UnitRef): string {
   const color = PLAYER_CSS[ref.playerId] ?? "#cccccc";
   const label = UNIT_LABEL[ref.typeId] ?? ref.typeId;
   return `<span style="color:${color};font-weight:bold">${label}#${ref.unitId}</span>`;
 }
 
-function tickerLine(html: string) {
+function tickerLine(html: string, unitIds?: UnitId[]) {
   const div = document.createElement("div");
   div.className = "t-line";
   div.innerHTML = html;
+  if (unitIds && unitIds.length > 0) div.dataset.units = unitIds.join(",");
   tickerEl.prepend(div);
 }
 
@@ -172,12 +192,15 @@ function tickerSeparator() {
 
 function tickerClear() {
   tickerEl.innerHTML = "";
+  lastKnownPos.clear();
+  tickerHighlightedUnits.clear();
 }
 
 function logGameEvent(e: GameEvent) {
   switch (e.type) {
     case "UnitMoved":
-      tickerLine(`${unitSpan(e.unit)} moved to (${e.position.q}, ${e.position.r})`);
+      lastKnownPos.set(e.unit.unitId, e.position);
+      tickerLine(`${unitSpan(e.unit)} moved to (${e.position.q}, ${e.position.r})`, [e.unit.unitId]);
       break;
     case "UnitDamaged": {
       const typeLabel =
@@ -187,18 +210,20 @@ function logGameEvent(e: GameEvent) {
           ? `${e.damageToEnergy} energy, ${e.damageToCondition} condition`
           : `${e.damageToEnergy} energy`;
       tickerLine(
-        `${unitSpan(e.attacker)} → ${unitSpan(e.unit)} dealt ${e.power}${typeLabel}: ${detail}`
+        `${unitSpan(e.attacker)} → ${unitSpan(e.unit)} dealt ${e.power}${typeLabel}: ${detail}`,
+        [e.attacker.unitId, e.unit.unitId]
       );
       break;
     }
     case "EnergyRegenerated": {
       const note = e.supported ? ' <span style="color:#aaa">[supported]</span>' : "";
-      tickerLine(`${unitSpan(e.unit)} regenerated ${e.amount} energy${note}`);
+      tickerLine(`${unitSpan(e.unit)} regenerated ${e.amount} energy${note}`, [e.unit.unitId]);
       break;
     }
     case "UnitDestroyed":
       tickerLine(
-        `${unitSpan(e.unit)} was <span style="color:#ff4444">destroyed</span> by ${unitSpan(e.destroyedBy)}`
+        `${unitSpan(e.unit)} was <span style="color:#ff4444">destroyed</span> by ${unitSpan(e.destroyedBy)}`,
+        [e.unit.unitId, e.destroyedBy.unitId]
       );
       break;
     case "TurnStarted":
@@ -210,14 +235,15 @@ function logGameEvent(e: GameEvent) {
       break;
     case "BuildOrdered":
       tickerLine(
-        `${unitSpan(e.unit)} build ordered at (${e.facilityPosition.q}, ${e.facilityPosition.r})`
+        `${unitSpan(e.unit)} build ordered at (${e.facilityPosition.q}, ${e.facilityPosition.r})`,
+        [e.unit.unitId]
       );
       break;
     case "UnitBuilt":
-      tickerLine(`${unitSpan(e.unit)} <span style="color:#88ffaa">construction complete</span>`);
+      tickerLine(`${unitSpan(e.unit)} <span style="color:#88ffaa">construction complete</span>`, [e.unit.unitId]);
       break;
     case "BuildCancelled":
-      tickerLine(`${unitSpan(e.unit)} build <span style="color:#ff8844">cancelled</span>`);
+      tickerLine(`${unitSpan(e.unit)} build <span style="color:#ff8844">cancelled</span>`, [e.unit.unitId]);
       break;
   }
 }
@@ -540,7 +566,8 @@ function render() {
   // --- Units ---
   const unitRadius = HEX_SIZE * 0.48;
   const barW = HEX_SIZE * 1.0;
-  const barH = 3;
+  const energyBarH = 4;
+  const conditionBarH = 3;
 
   game.players.forEach((player) => {
     const pColor = player.id === 1 ? C.p1 : C.p2;
@@ -549,12 +576,21 @@ function render() {
       const isSelected = unit.id === selectedUnitId;
       const ut = unitTypes.get(unit.typeId)!;
 
+      // Track for ticker-hover ghosts
+      lastKnownPos.set(unit.id, unit.position);
+
       // Influence hover highlight — outermost ring, behind everything else
       if (hoveredInfluencers.has(unit.id)) {
         unitGfx.lineStyle(0);
         unitGfx.beginFill(C.influenceRing, 0.3);
         unitGfx.drawCircle(cx, cy, unitRadius + 10);
         unitGfx.endFill();
+      }
+
+      // Ticker-hover highlight — bright white ring
+      if (tickerHighlightedUnits.has(unit.id)) {
+        unitGfx.lineStyle(2, C.tickerHighlight, 0.9);
+        unitGfx.drawCircle(cx, cy, unitRadius + 7);
       }
 
       // Selection highlight behind unit
@@ -576,17 +612,17 @@ function render() {
       unitGfx.drawCircle(cx, cy, unitRadius);
       unitGfx.endFill();
 
-      // Energy bar (blue) above unit
+      // Energy bar (cyan, 4px) above condition bar (green, 3px)
       const barX = cx - barW / 2;
       const barY = cy - unitRadius - 7;
       unitGfx.lineStyle(0);
       unitGfx.beginFill(C.barBg, alpha);
-      unitGfx.drawRect(barX, barY - barH - 1, barW, barH);
-      unitGfx.drawRect(barX, barY, barW, barH);
+      unitGfx.drawRect(barX, barY - energyBarH - 1, barW, energyBarH);
+      unitGfx.drawRect(barX, barY, barW, conditionBarH);
       unitGfx.beginFill(C.energy, alpha);
-      unitGfx.drawRect(barX, barY - barH - 1, barW * (unit.energy / ut.maxEnergy), barH);
+      unitGfx.drawRect(barX, barY - energyBarH - 1, barW * (unit.energy / ut.maxEnergy), energyBarH);
       unitGfx.beginFill(C.condition, alpha);
-      unitGfx.drawRect(barX, barY, barW * (unit.condition / ut.maxCondition), barH);
+      unitGfx.drawRect(barX, barY, barW * (unit.condition / ut.maxCondition), conditionBarH);
       unitGfx.endFill();
 
       // Unit type label
@@ -597,6 +633,20 @@ function render() {
       labelLayer.addChild(lbl);
     });
   });
+
+  // Ghost rings for ticker-highlighted units that are no longer on the map
+  for (const uid of tickerHighlightedUnits) {
+    const pos = lastKnownPos.get(uid);
+    if (!pos) continue;
+    // Check if unit is still alive (already drew live ring above)
+    let alive = false;
+    game.players.forEach((p) => { if (p.units.has(uid)) alive = true; });
+    if (!alive) {
+      const [cx, cy] = hexCenter(pos.q, pos.r);
+      unitGfx.lineStyle(2, C.tickerHighlight, 0.6);
+      unitGfx.drawCircle(cx, cy, unitRadius + 7);
+    }
+  }
 
   drawRelations();
 }
@@ -647,7 +697,7 @@ function updateUnitInfo() {
   }
 
   const ut = unitTypes.get(unit.typeId)!;
-  const bgColor = playerId === 1 ? "#1a2f6e" : "#6e1a1a";
+  const bgColor = playerId === 1 ? "#1a2f6e" : "#6e3a0a";
   const aoi = ut.aoiMin === ut.aoiMax ? `${ut.aoiMin}` : `${ut.aoiMin}–${ut.aoiMax}`;
   unitInfoEl.style.display = "block";
   unitInfoEl.style.background = bgColor;
