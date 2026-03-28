@@ -107,7 +107,7 @@ export class OnlineClient {
   connect(gameId: string, onMessage: (msg: unknown) => void, onClose: () => void): void {
     if (this.ws) this.ws.close();
     const wsUrl = this.serverUrl.replace(/^http/, "ws");
-    const url = `${wsUrl}?gameId=${encodeURIComponent(gameId)}&token=${encodeURIComponent(this.token ?? "")}`;
+    const url = `${wsUrl}/?gameId=${encodeURIComponent(gameId)}&token=${encodeURIComponent(this.token ?? "")}`;
     this.ws = new WebSocket(url);
     this.ws.onmessage = (e) => {
       try {
