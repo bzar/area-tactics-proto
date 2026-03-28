@@ -253,24 +253,10 @@
   </div>
 
   <!-- New-game screen (shown at startup and after game ends) -->
-  <div id="new-game" class="overlay visible">
+  <div id="new-game" class="overlay">
     <h1>Area Tactics</h1>
 
-    <div class="ng-panel">
-      <h3>Mode</h3>
-      <div class="map-option">
-        <input type="radio" name="mode" id="mode-hvh" value="hvh" checked />
-        <label for="mode-hvh">Human vs Human (local)</label>
-      </div>
-      <div class="map-option">
-        <input type="radio" name="mode" id="mode-hva" value="hva" />
-        <label for="mode-hva">Human vs AI</label>
-      </div>
-      <div class="map-option">
-        <input type="radio" name="mode" id="mode-online" value="online" />
-        <label for="mode-online">Online Multiplayer</label>
-      </div>
-    </div>
+    <button id="ng-back-btn" class="lby-btn-sm" style="margin-bottom:10px;opacity:0.6">← Back</button>
 
     <div class="ng-panel">
       <h3>Map</h3>
@@ -306,7 +292,7 @@
   <script type="module" src="/src/main.ts"></script>
 
   <!-- Online lobby overlay -->
-  <div id="lobby" class="overlay" style="z-index:25">
+  <div id="lobby" class="overlay visible" style="z-index:25">
     <div class="ng-panel" id="lby-panel">
       <h3>ONLINE MULTIPLAYER</h3>
 
@@ -350,7 +336,7 @@
           <label for="lby-f-support">Support</label>
         </div>
         <div class="feature-option">
-          <input type="checkbox" id="lby-f-flanking" />
+          <input type="checkbox" id="lby-f-flanking" checked />
           <label for="lby-f-flanking">Flanking</label>
         </div>
         <div class="lby-btns" style="margin-top:14px">
@@ -368,7 +354,8 @@
       </div>
 
       <div id="lby-status" class="lby-status-msg"></div>
-      <button id="lby-back-btn" class="lby-btn-sm" style="margin-top:6px;opacity:0.6">← Back to Menu</button>
+      <div style="text-align:center;color:#667788;margin-top:10px;margin-bottom:4px;font-size:0.85em">or</div>
+      <button id="lby-local-btn" class="lby-btn-sm" style="width:100%;opacity:0.7">Local Game</button>
     </div>
   </div>
 </body>

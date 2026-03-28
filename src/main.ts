@@ -914,12 +914,8 @@ function scheduleBotIfAI() {
 
 function showNewGame() {
   document.getElementById("game-over")!.classList.remove("visible");
-  document.getElementById("new-game")!.classList.add("visible");
-  if (onlineClient) {
-    onlineClient.disconnect();
-    onlineClient = null;
-    myGamePlayerId = null;
-  }
+  document.getElementById("new-game")!.classList.remove("visible");
+  document.getElementById("lobby")!.classList.add("visible");
 }
 
 function showGameOver(winnerId: number) {
@@ -1096,14 +1092,6 @@ document.getElementById("start-btn")!.addEventListener("click", () => {
   const modeVal =
     (document.querySelector('input[name="mode"]:checked') as HTMLInputElement)?.value ?? "hvh";
 
-  if (modeVal === "online") {
-    (document.getElementById("lby-url") as HTMLInputElement).value = DEFAULT_SERVER_URL;
-    document.getElementById("new-game")!.classList.remove("visible");
-    document.getElementById("lobby")!.classList.add("visible");
-    lobbyShowSection("auth");
-    return;
-  }
-
   const selected =
     (document.querySelector('input[name="map"]:checked') as HTMLInputElement)?.value ?? "test";
   const features: GameFeatures = {
@@ -1138,6 +1126,9 @@ window.addEventListener("resize", () => {
 // ============================================================================
 // Online Lobby
 // ============================================================================
+
+// Pre-fill server URL
+(document.getElementById("lby-url") as HTMLInputElement).value = DEFAULT_SERVER_URL;
 
 let lobbyClient: OnlineClient | null = null;
 let lobbyCreatedGameId: string | null = null;
@@ -1290,9 +1281,11 @@ document.getElementById("lby-copy-btn")!.addEventListener("click", () => {
   const id = (document.getElementById("lby-gid-text") as HTMLElement).textContent ?? "";
   navigator.clipboard.writeText(id).catch(() => {});
 });
-document.getElementById("lby-back-btn")!.addEventListener("click", () => {
+document.getElementById("lby-local-btn")!.addEventListener("click", () => {
   document.getElementById("lobby")!.classList.remove("visible");
   document.getElementById("new-game")!.classList.add("visible");
-  if (onlineClient) { onlineClient.disconnect(); onlineClient = null; myGamePlayerId = null; }
-  lobbyClient = null;
+});
+document.getElementById("ng-back-btn")!.addEventListener("click", () => {
+  document.getElementById("new-game")!.classList.remove("visible");
+  document.getElementById("lobby")!.classList.add("visible");
 });
