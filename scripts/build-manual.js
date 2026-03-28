@@ -10,11 +10,21 @@ const html = `<!DOCTYPE html>
   <meta charset="utf-8" />
   <title>Area Tactics — Manual</title>
   <style>
+    :root {
+      --bg-deep:    #28192f;
+      --bg-raise:   #22474c;
+      --border:     #585d81;
+      --border-lo:  #45365d;
+      --text:       #a0d8d7;
+      --text-hi:    #eaeae8;
+      --text-lo:    #668faf;
+      --accent-hi:  #7dbefa;
+    }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      background: #1a1a2e;
-      color: #ddeeff;
+      background: var(--bg-deep);
+      color: var(--text);
       font-family: sans-serif;
       font-size: 15px;
       line-height: 1.65;
@@ -28,47 +38,47 @@ const html = `<!DOCTYPE html>
 
     h1 {
       font-size: 28px;
-      color: #ffffff;
+      color: var(--text-hi);
       margin-bottom: 6px;
-      border-bottom: 2px solid #334466;
+      border-bottom: 2px solid var(--border);
       padding-bottom: 10px;
     }
 
     h2 {
       font-size: 20px;
-      color: #88aaff;
+      color: var(--accent-hi);
       margin: 36px 0 10px;
-      border-bottom: 1px solid #334466;
+      border-bottom: 1px solid var(--border);
       padding-bottom: 6px;
     }
 
     h3 {
       font-size: 16px;
-      color: #aaccff;
+      color: var(--text-hi);
       margin: 22px 0 8px;
     }
 
     p {
       margin-bottom: 10px;
-      color: #ccddf0;
+      color: var(--text);
     }
 
     ul, ol {
       margin: 6px 0 12px 22px;
-      color: #ccddf0;
+      color: var(--text);
     }
 
     li { margin-bottom: 4px; }
 
-    strong { color: #ffffff; }
+    strong { color: var(--text-hi); }
 
-    em { color: #99bbdd; font-style: italic; }
+    em { color: var(--text-lo); font-style: italic; }
 
-    a { color: #5599ff; }
+    a { color: var(--accent-hi); }
 
     hr {
       border: none;
-      border-top: 1px solid #334466;
+      border-top: 1px solid var(--border);
       margin: 28px 0;
     }
 
@@ -79,20 +89,20 @@ const html = `<!DOCTYPE html>
       font-size: 14px;
     }
 
-    thead tr { background: rgba(51, 68, 102, 0.6); }
+    thead tr { background: var(--bg-raise); }
 
     th {
       text-align: left;
       padding: 8px 12px;
-      color: #aaccff;
+      color: var(--text-hi);
       font-weight: 600;
-      border-bottom: 1px solid #334466;
+      border-bottom: 1px solid var(--border);
     }
 
     td {
       padding: 7px 12px;
-      border-bottom: 1px solid rgba(51, 68, 102, 0.4);
-      color: #ccddf0;
+      border-bottom: 1px solid var(--border-lo);
+      color: var(--text);
     }
 
     tr:hover td { background: rgba(255,255,255,0.04); }
@@ -103,7 +113,7 @@ const html = `<!DOCTYPE html>
       padding: 1px 5px;
       font-family: monospace;
       font-size: 13px;
-      color: #eef;
+      color: var(--text-hi);
     }
 
     .top-bar {

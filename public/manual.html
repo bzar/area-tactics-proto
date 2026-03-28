@@ -4,11 +4,21 @@
   <meta charset="utf-8" />
   <title>Area Tactics — Manual</title>
   <style>
+    :root {
+      --bg-deep:    #28192f;
+      --bg-raise:   #22474c;
+      --border:     #585d81;
+      --border-lo:  #45365d;
+      --text:       #a0d8d7;
+      --text-hi:    #eaeae8;
+      --text-lo:    #668faf;
+      --accent-hi:  #7dbefa;
+    }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      background: #1a1a2e;
-      color: #ddeeff;
+      background: var(--bg-deep);
+      color: var(--text);
       font-family: sans-serif;
       font-size: 15px;
       line-height: 1.65;
@@ -22,47 +32,47 @@
 
     h1 {
       font-size: 28px;
-      color: #ffffff;
+      color: var(--text-hi);
       margin-bottom: 6px;
-      border-bottom: 2px solid #334466;
+      border-bottom: 2px solid var(--border);
       padding-bottom: 10px;
     }
 
     h2 {
       font-size: 20px;
-      color: #88aaff;
+      color: var(--accent-hi);
       margin: 36px 0 10px;
-      border-bottom: 1px solid #334466;
+      border-bottom: 1px solid var(--border);
       padding-bottom: 6px;
     }
 
     h3 {
       font-size: 16px;
-      color: #aaccff;
+      color: var(--text-hi);
       margin: 22px 0 8px;
     }
 
     p {
       margin-bottom: 10px;
-      color: #ccddf0;
+      color: var(--text);
     }
 
     ul, ol {
       margin: 6px 0 12px 22px;
-      color: #ccddf0;
+      color: var(--text);
     }
 
     li { margin-bottom: 4px; }
 
-    strong { color: #ffffff; }
+    strong { color: var(--text-hi); }
 
-    em { color: #99bbdd; font-style: italic; }
+    em { color: var(--text-lo); font-style: italic; }
 
-    a { color: #5599ff; }
+    a { color: var(--accent-hi); }
 
     hr {
       border: none;
-      border-top: 1px solid #334466;
+      border-top: 1px solid var(--border);
       margin: 28px 0;
     }
 
@@ -73,20 +83,20 @@
       font-size: 14px;
     }
 
-    thead tr { background: rgba(51, 68, 102, 0.6); }
+    thead tr { background: var(--bg-raise); }
 
     th {
       text-align: left;
       padding: 8px 12px;
-      color: #aaccff;
+      color: var(--text-hi);
       font-weight: 600;
-      border-bottom: 1px solid #334466;
+      border-bottom: 1px solid var(--border);
     }
 
     td {
       padding: 7px 12px;
-      border-bottom: 1px solid rgba(51, 68, 102, 0.4);
-      color: #ccddf0;
+      border-bottom: 1px solid var(--border-lo);
+      color: var(--text);
     }
 
     tr:hover td { background: rgba(255,255,255,0.04); }
@@ -97,7 +107,7 @@
       padding: 1px 5px;
       font-family: monospace;
       font-size: 13px;
-      color: #eef;
+      color: var(--text-hi);
     }
 
     .top-bar {
@@ -128,7 +138,7 @@
 <tbody><tr>
 <td><strong>Base</strong></td>
 <td>★ (star)</td>
-<td>Starting position; anchors territory claims</td>
+<td>Starting position; anchors territory claims and support chains</td>
 </tr>
 <tr>
 <td><strong>Depot</strong></td>
@@ -242,9 +252,9 @@
 <li><strong>Destruction</strong>: a unit whose condition reaches 0 is removed from the map.</li>
 </ul>
 <h3>Split Damage</h3>
-<p>If a unit has <strong>multiple enemies</strong> in its AoI at the same time, its power is <strong>halved</strong> (rounded down) for each target. Spreading your units out helps avoid this.</p>
+<p>If a unit has <strong>multiple enemies</strong> in its AoI at the same time, its power is <strong>halved</strong> (rounded down) <strong>against each target individually</strong> — every targeted enemy takes the same reduced damage.</p>
 <h3>Flanking <em>(optional feature)</em></h3>
-<p>If an enemy unit is influenced by <strong>two or more of your units from different angles</strong> (one influencing unit does not influence the other), the damage is increased by <strong>50%</strong> (rounded down).</p>
+<p>If an enemy unit is damaged by <strong>two or more of your units that do not influence each other</strong> (i.e. they are out of each other&#39;s AoI), the damage is increased by <strong>50%</strong> (rounded down). A unit with a large AoI — such as a Mortar — can create a flanking angle on its own if it reaches the enemy from a range outside the other attacker&#39;s AoI.</p>
 <p>Split damage and flanking cancel each other out.</p>
 <hr>
 <h2>Territory &amp; Claiming</h2>

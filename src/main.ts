@@ -1,4 +1,5 @@
 import * as PIXI from "pixi.js";
+import { colors } from './palette.js';
 import { loadMap, listMaps, defaultUnitTypes, createGameFromMap } from "area-tactics";
 import { GameProcessor, GameFeatures } from "area-tactics";
 import { InputProcessor } from "./input";
@@ -143,8 +144,8 @@ const CLAIMED_CONTESTED =
   (((CLAIMED_P1 & 0xff) + (CLAIMED_P2 & 0xff)) >> 1);
 
 const PLAYER_CSS: Record<number, string> = {
-  1: "#5588ff",
-  2: "#ff9944",
+  1: colors.p1,
+  2: colors.p2,
 };
 
 // ============================================================================
@@ -171,7 +172,7 @@ tickerEl.addEventListener("mouseleave", () => {
 });
 
 function unitSpan(ref: UnitRef): string {
-  const color = PLAYER_CSS[ref.playerId] ?? "#cccccc";
+  const color = PLAYER_CSS[ref.playerId] ?? colors.gray;
   const label = UNIT_LABEL[ref.typeId] ?? ref.typeId;
   return `<span style="color:${color};font-weight:bold">${label}#${ref.unitId}</span>`;
 }
@@ -204,7 +205,7 @@ function logGameEvent(e: GameEvent) {
       break;
     case "UnitDamaged": {
       const typeLabel =
-        e.damageType === "Normal" ? "" : ` <span style="color:#aaa">[${e.damageType}]</span>`;
+        e.damageType === "Normal" ? "" : ` <span style="color:${colors.khaki}">[${e.damageType}]</span>`;
       const detail =
         e.damageToCondition > 0
           ? `${e.damageToEnergy} energy, ${e.damageToCondition} condition`
@@ -216,22 +217,22 @@ function logGameEvent(e: GameEvent) {
       break;
     }
     case "EnergyRegenerated": {
-      const note = e.supported ? ' <span style="color:#aaa">[supported]</span>' : "";
+      const note = e.supported ? ` <span style="color:${colors.khaki}">[supported]</span>` : "";
       tickerLine(`${unitSpan(e.unit)} regenerated ${e.amount} energy${note}`, [e.unit.unitId]);
       break;
     }
     case "UnitDestroyed":
       tickerLine(
-        `${unitSpan(e.unit)} was <span style="color:#ff4444">destroyed</span> by ${unitSpan(e.destroyedBy)}`,
+        `${unitSpan(e.unit)} was <span style="color:${colors.red}">destroyed</span> by ${unitSpan(e.destroyedBy)}`,
         [e.unit.unitId, e.destroyedBy.unitId]
       );
       break;
     case "TurnStarted":
       tickerSeparator();
-      tickerLine(`<span style="color:#aaaacc">— Turn ${e.turn}, Player ${e.playerId} —</span>`);
+      tickerLine(`<span style="color:${colors.text}">— Turn ${e.turn}, Player ${e.playerId} —</span>`);
       break;
     case "GameEnded":
-      tickerLine(`<span style="color:#ffcc00">Game over — Player ${e.winnerId} wins!</span>`);
+      tickerLine(`<span style="color:${colors.yellow}">Game over — Player ${e.winnerId} wins!</span>`);
       break;
     case "BuildOrdered":
       tickerLine(
@@ -240,10 +241,10 @@ function logGameEvent(e: GameEvent) {
       );
       break;
     case "UnitBuilt":
-      tickerLine(`${unitSpan(e.unit)} <span style="color:#88ffaa">construction complete</span>`, [e.unit.unitId]);
+      tickerLine(`${unitSpan(e.unit)} <span style="color:${colors.greenHi}">construction complete</span>`, [e.unit.unitId]);
       break;
     case "BuildCancelled":
-      tickerLine(`${unitSpan(e.unit)} build <span style="color:#ff8844">cancelled</span>`, [e.unit.unitId]);
+      tickerLine(`${unitSpan(e.unit)} build <span style="color:${colors.orange}">cancelled</span>`, [e.unit.unitId]);
       break;
   }
 }
@@ -697,7 +698,7 @@ function updateUnitInfo() {
   }
 
   const ut = unitTypes.get(unit.typeId)!;
-  const bgColor = playerId === 1 ? "#1a2f6e" : "#6e3a0a";
+  const bgColor = playerId === 1 ? colors.p1Bg : colors.p2Bg;
   const aoi = ut.aoiMin === ut.aoiMax ? `${ut.aoiMin}` : `${ut.aoiMin}–${ut.aoiMax}`;
   unitInfoEl.style.display = "block";
   unitInfoEl.style.background = bgColor;
@@ -798,7 +799,7 @@ function selectBuildType(typeId: string) {
   const portrait = document.getElementById("build-portrait") as HTMLCanvasElement;
   const ctx = portrait.getContext("2d")!;
   ctx.clearRect(0, 0, 80, 80);
-  const color = game.currentPlayerId === 1 ? "#3366ee" : "#dd3333";
+  const color = game.currentPlayerId === 1 ? colors.p1 : colors.p2;
   ctx.beginPath();
   ctx.arc(40, 40, 36, 0, Math.PI * 2);
   ctx.fillStyle = color;
@@ -806,7 +807,7 @@ function selectBuildType(typeId: string) {
   ctx.strokeStyle = "rgba(255,255,255,0.35)";
   ctx.lineWidth = 2;
   ctx.stroke();
-  ctx.fillStyle = "#ffffff";
+  ctx.fillStyle = colors.white;
   ctx.font = "bold 34px monospace";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
