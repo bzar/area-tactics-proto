@@ -269,6 +269,7 @@ let { game, gameProcessor, inputProcessor } = freshGame("test");
 let gameIsOver = false;
 let onlineClient: OnlineClient | null = null;
 let myGamePlayerId: number | null = null;
+let currentGameId: string | null = null;
 
 function isMyTurn(): boolean {
   return !onlineClient || myGamePlayerId === game.currentPlayerId;
@@ -953,6 +954,14 @@ function handleServerMessage(msg: any): void {
     updateHUD();
     render();
     updateUnitInfo();
+    if (currentGameId) {
+      onlineClient!.getEvents(currentGameId).then((entries) => {
+        for (const entry of entries) {
+          logGameEvent(entry.event as GameEvent);
+        }
+        tickerEl.scrollTop = 0;
+      }).catch(() => {});
+    }
     return;
   }
   if (msg.type === "Error") {
@@ -1218,10 +1227,12 @@ async function lobbyJoin(gameId: string, alreadyIn: boolean) {
 }
 
 function lobbyConnect(gameId: string) {
+  currentGameId = gameId;
   onlineClient = lobbyClient;
   lobbyClient!.connect(gameId, handleServerMessage, () => {
     if (onlineClient) {
       onlineClient = null;
+      currentGameId = null;
       myGamePlayerId = null;
       lobbyStatus("Disconnected from server.", true);
       document.getElementById("lobby")!.classList.add("visible");

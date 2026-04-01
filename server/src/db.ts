@@ -33,6 +33,16 @@ export function initDb() {
       FOREIGN KEY (game_id) REFERENCES games(id),
       FOREIGN KEY (user_id) REFERENCES users(id)
     );
+
+    CREATE TABLE IF NOT EXISTS game_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      game_id TEXT NOT NULL,
+      turn INTEGER NOT NULL,
+      event_data TEXT NOT NULL,
+      FOREIGN KEY (game_id) REFERENCES games(id)
+    );
+
+    CREATE INDEX IF NOT EXISTS game_events_game_id ON game_events(game_id);
   `);
   return db;
 }

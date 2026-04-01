@@ -104,6 +104,11 @@ export class OnlineClient {
     return this.post(`/games/${gameId}/join`, {}, true);
   }
 
+  async getEvents(gameId: string, after?: number): Promise<{ id: number; turn: number; event: unknown }[]> {
+    const qs = after !== undefined ? `?after=${after}` : "";
+    return this.get(`/games/${gameId}/events${qs}`);
+  }
+
   connect(gameId: string, onMessage: (msg: unknown) => void, onClose: () => void): void {
     if (this.ws) this.ws.close();
     const wsUrl = this.serverUrl.replace(/^http/, "ws");

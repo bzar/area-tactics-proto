@@ -133,5 +133,27 @@ export function gamesRouter(db: Db) {
     res.json({ id: req.params.id, slot });
   });
 
+  // Get events for a game, optionally paginated with ?after=<id>
+  router.get("/:id/events", (req: AuthRequest, res) => {
+    const userId = req.user!.userId;
+    const after = req.query.after !== undefined ? Number(req.query.after) : 0;
+
+    const member = db
+      .prepare("SELECT 1 FROM game_players WHERE game_id = ? AND user_id = ?")
+      .get(req.params.id, userId);
+    if (!member) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+
+    const rows = db
+      .prepare(
+        "SELECT id, turn, event_data FROM game_events WHERE game_id = ? AND id > ? ORDER BY id ASC"
+      )
+      .all(req.params.id, after) as { id: number; turn: number; event_data: string }[];
+
+    res.json(rows.map((r) => ({ id: r.id, turn: r.turn, event: JSON.parse(r.event_data) })));
+  });
+
   return router;
 }

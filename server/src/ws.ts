@@ -87,7 +87,9 @@ export function setupWsUpgrade(wss: WebSocketServer, db: Db, gameManager: GameMa
           return;
         }
 
+        const turn = processor.getGame().turn;
         gameManager.saveGame(gameId);
+        gameManager.appendEvents(gameId, turn, events);
         for (const event of events) {
           gameManager.broadcast(gameId, event);
         }

@@ -57,6 +57,15 @@ export class GameManager {
     }
   }
 
+  appendEvents(gameId: string, turn: number, events: GameEvent[]): void {
+    if (events.length === 0) return;
+    const placeholders = events.map(() => "(?, ?, ?)").join(", ");
+    const values = events.flatMap((e) => [gameId, turn, JSON.stringify(e)]);
+    this.db
+      .prepare(`INSERT INTO game_events (game_id, turn, event_data) VALUES ${placeholders}`)
+      .run(...values);
+  }
+
   broadcast(gameId: string, event: GameEvent): void {
     const msg = JSON.stringify(event);
     for (const ctx of this.clients.get(gameId) ?? []) {
