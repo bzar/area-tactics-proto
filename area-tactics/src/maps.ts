@@ -18,6 +18,7 @@ import {
 import testMapJson from "../maps/test.json" with { type: "json" };
 import smallMapJson from "../maps/small.json" with { type: "json" };
 import twoBasesMapJson from "../maps/two-bases.json" with { type: "json" };
+import spiralMapJson from "../maps/spiral.json" with { type: "json" };
 
 // ============================================================================
 // JSON map format
@@ -27,6 +28,8 @@ export interface MapJsonGrid {
   type: "rect";
   cols: number;
   rows: number;
+  /** Optional list of tile positions to exclude from the rectangular grid. */
+  removedTiles?: Array<{ q: number; r: number }>;
 }
 
 export interface MapJsonUnit {
@@ -150,12 +153,20 @@ export function defaultUnitTypes(): Map<string, UnitType> {
 // JSON map parser
 // ============================================================================
 
-function rectMapGrid(cols: number, rows: number): HexGrid {
+function rectMapGrid(
+  cols: number,
+  rows: number,
+  removedTiles?: Array<{ q: number; r: number }>
+): HexGrid {
+  const removed = new Set((removedTiles ?? []).map((p) => positionKey(p)));
   const positions: Position[] = [];
   for (let q = 0; q < cols; q++) {
     const rOffset = -Math.floor(q / 2);
     for (let vr = 0; vr < rows; vr++) {
-      positions.push(createPosition(q, rOffset + vr));
+      const pos = createPosition(q, rOffset + vr);
+      if (!removed.has(positionKey(pos))) {
+        positions.push(pos);
+      }
     }
   }
   return new HexGrid(positions);
@@ -164,7 +175,7 @@ function rectMapGrid(cols: number, rows: number): HexGrid {
 export function parseMapJson(json: MapJson): MapDefinition {
   const { meta, data } = json;
 
-  const grid = rectMapGrid(data.grid.cols, data.grid.rows);
+  const grid = rectMapGrid(data.grid.cols, data.grid.rows, data.grid.removedTiles);
 
   const unitPlacements: UnitPlacement[] = data.units.map((u) => ({
     typeId: u.typeId,
@@ -200,6 +211,7 @@ const ALL_MAPS: Record<string, MapDefinition> = {
   test: parseMapJson(testMapJson as MapJson),
   small: parseMapJson(smallMapJson as MapJson),
   "two-bases": parseMapJson(twoBasesMapJson as MapJson),
+  spiral: parseMapJson(spiralMapJson as MapJson),
 };
 
 // ============================================================================
