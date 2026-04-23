@@ -1,0 +1,46 @@
+{
+  "meta": {
+    "name": "spiral",
+    "label": "Spiral (13×12)"
+  },
+  "data": {
+    "grid": {
+      "type": "rect",
+      "cols": 13,
+      "rows": 12,
+      "removedTiles": [
+        { "q": 0,  "r": 11 },
+        { "q": 12, "r": -6 }
+      ]
+    },
+    "unitCapacity": { "1": 20, "2": 20 },
+    "units": [
+      { "typeId": "infantry", "playerId": 1, "q": 0,  "r": 0 },
+      { "typeId": "infantry", "playerId": 2, "q": 12, "r": 5 }
+    ],
+    "tiles": [
+      { "q": 0,  "r": 0,  "features": ["Base"], "baseForPlayerId": 1 },
+      { "q": 12, "r": 5,  "features": ["Base"], "baseForPlayerId": 2 },
+
+      { "q": 1,  "r": 1,  "features": ["Facility"] },
+      { "q": 11, "r": 4,  "features": ["Facility"] },
+      { "q": 11, "r": -4, "features": ["Facility"] },
+      { "q": 1,  "r": 9,  "features": ["Facility"] },
+      { "q": 12, "r": -1, "features": ["Facility"] },
+      { "q": 0,  "r": 6,  "features": ["Facility"] },
+
+      { "q": 3,  "r": -1, "features": ["Depot"] },
+      { "q": 9,  "r": 6,  "features": ["Depot"] },
+      { "q": 5,  "r": -2, "features": ["Depot"] },
+      { "q": 7,  "r": 7,  "features": ["Depot"] },
+      { "q": 8,  "r": -2, "features": ["Depot"] },
+      { "q": 4,  "r": 7,  "features": ["Depot"] },
+      { "q": 10, "r": -1, "features": ["Depot"] },
+      { "q": 2,  "r": 6,  "features": ["Depot"] },
+      { "q": 10, "r": 2,  "features": ["Depot"] },
+      { "q": 2,  "r": 3,  "features": ["Depot"] },
+      { "q": 8,  "r": 3,  "features": ["Depot"] },
+      { "q": 4,  "r": 2,  "features": ["Depot"] }
+    ]
+  }
+}
