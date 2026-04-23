@@ -3,7 +3,7 @@ import { TileFeature, ClaimType } from "area-tactics";
 import { palette } from "./palette.js";
 
 /** Convert a CSS hex color string (e.g. '#315dcd') to a PIXI number (e.g. 0x315dcd). */
-function cssHex(s: string): number {
+export function cssHex(s: string): number {
   return parseInt(s.replace("#", ""), 16);
 }
 

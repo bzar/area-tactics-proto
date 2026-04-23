@@ -29,12 +29,8 @@ import {
   CLAIMED_P2,
   CLAIMED_CONTESTED,
   drawTileFeatureMarkers,
+  cssHex,
 } from "./render.js";
-
-/** Convert a CSS hex color string to a PIXI number. */
-function cssHex(s: string): number {
-  return parseInt(s.replace("#", ""), 16);
-}
 
 // Scale hex size so the game is legible on smaller retina screens.
 // Reference: 28px at 1600px+ viewport width; inversely scales for narrower screens.

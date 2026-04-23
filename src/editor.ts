@@ -10,12 +10,8 @@ import {
   C,
   UNIT_LABEL,
   drawTileFeatureMarkers,
+  cssHex,
 } from "./render.js";
-
-/** Convert a CSS hex color string to a PIXI number. */
-function cssHex(s: string): number {
-  return parseInt(s.replace("#", ""), 16);
-}
 
 // ============================================================================
 // Editor state
