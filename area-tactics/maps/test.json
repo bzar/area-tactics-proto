@@ -1,0 +1,63 @@
+{
+  "meta": {
+    "name": "test",
+    "label": "Test (30×20)"
+  },
+  "data": {
+    "grid": { "type": "rect", "cols": 30, "rows": 20 },
+    "unitCapacity": { "1": 31, "2": 31 },
+    "units": [
+      { "typeId": "infantry", "playerId": 1, "q": 0, "r": 0 },
+      { "typeId": "infantry", "playerId": 1, "q": 0, "r": 4 },
+      { "typeId": "infantry", "playerId": 1, "q": 0, "r": 8 },
+      { "typeId": "infantry", "playerId": 1, "q": 0, "r": 12 },
+      { "typeId": "infantry", "playerId": 1, "q": 0, "r": 16 },
+      { "typeId": "mortar",   "playerId": 1, "q": 1, "r": 2 },
+      { "typeId": "mortar",   "playerId": 1, "q": 1, "r": 6 },
+      { "typeId": "mortar",   "playerId": 1, "q": 1, "r": 10 },
+      { "typeId": "mortar",   "playerId": 1, "q": 1, "r": 14 },
+      { "typeId": "mortar",   "playerId": 1, "q": 1, "r": 18 },
+      { "typeId": "scout",    "playerId": 1, "q": 2, "r": -1 },
+      { "typeId": "scout",    "playerId": 1, "q": 2, "r": 3 },
+      { "typeId": "scout",    "playerId": 1, "q": 2, "r": 7 },
+      { "typeId": "scout",    "playerId": 1, "q": 2, "r": 11 },
+      { "typeId": "scout",    "playerId": 1, "q": 2, "r": 15 },
+      { "typeId": "convoy",   "playerId": 1, "q": 3, "r": 1 },
+      { "typeId": "convoy",   "playerId": 1, "q": 3, "r": 5 },
+      { "typeId": "convoy",   "playerId": 1, "q": 3, "r": 9 },
+      { "typeId": "convoy",   "playerId": 1, "q": 3, "r": 13 },
+      { "typeId": "convoy",   "playerId": 1, "q": 3, "r": 17 },
+      { "typeId": "infantry", "playerId": 2, "q": 29, "r": -14 },
+      { "typeId": "infantry", "playerId": 2, "q": 29, "r": -10 },
+      { "typeId": "infantry", "playerId": 2, "q": 29, "r": -6 },
+      { "typeId": "infantry", "playerId": 2, "q": 29, "r": -2 },
+      { "typeId": "infantry", "playerId": 2, "q": 29, "r": 2 },
+      { "typeId": "mortar",   "playerId": 2, "q": 28, "r": -12 },
+      { "typeId": "mortar",   "playerId": 2, "q": 28, "r": -8 },
+      { "typeId": "mortar",   "playerId": 2, "q": 28, "r": -4 },
+      { "typeId": "mortar",   "playerId": 2, "q": 28, "r": 0 },
+      { "typeId": "mortar",   "playerId": 2, "q": 28, "r": 4 },
+      { "typeId": "scout",    "playerId": 2, "q": 27, "r": -13 },
+      { "typeId": "scout",    "playerId": 2, "q": 27, "r": -9 },
+      { "typeId": "scout",    "playerId": 2, "q": 27, "r": -5 },
+      { "typeId": "scout",    "playerId": 2, "q": 27, "r": -1 },
+      { "typeId": "scout",    "playerId": 2, "q": 27, "r": 3 },
+      { "typeId": "convoy",   "playerId": 2, "q": 26, "r": -11 },
+      { "typeId": "convoy",   "playerId": 2, "q": 26, "r": -7 },
+      { "typeId": "convoy",   "playerId": 2, "q": 26, "r": -3 },
+      { "typeId": "convoy",   "playerId": 2, "q": 26, "r": 1 },
+      { "typeId": "convoy",   "playerId": 2, "q": 26, "r": 5 }
+    ],
+    "tiles": [
+      { "q": 0,  "r": 0,   "features": ["Base"],     "baseForPlayerId": 1 },
+      { "q": 0,  "r": 19,  "features": ["Facility"] },
+      { "q": 29, "r": 5,   "features": ["Base"],     "baseForPlayerId": 2 },
+      { "q": 29, "r": -14, "features": ["Facility"] },
+      { "q": 14, "r": -7,  "features": ["Depot"] },
+      { "q": 14, "r": -2,  "features": ["Depot"] },
+      { "q": 14, "r": 3,   "features": ["Depot"] },
+      { "q": 14, "r": 7,   "features": ["Depot"] },
+      { "q": 14, "r": 12,  "features": ["Depot"] }
+    ]
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "meta": {
+    "name": "two-bases",
+    "label": "Two Bases (20×20)"
+  },
+  "data": {
+    "grid": { "type": "rect", "cols": 20, "rows": 20 },
+    "unitCapacity": { "1": 20, "2": 20 },
+    "units": [
+      { "typeId": "infantry", "playerId": 1, "q": 10, "r": -5 },
+      { "typeId": "infantry", "playerId": 1, "q": 10, "r": -4 },
+      { "typeId": "infantry", "playerId": 1, "q": 8,  "r": -4 },
+      { "typeId": "convoy",   "playerId": 1, "q": 8,  "r": -3 },
+      { "typeId": "convoy",   "playerId": 1, "q": 9,  "r": -3 },
+      { "typeId": "infantry", "playerId": 1, "q": 1,  "r": 10 },
+      { "typeId": "infantry", "playerId": 1, "q": 1,  "r": 9 },
+      { "typeId": "infantry", "playerId": 1, "q": 0,  "r": 9 },
+      { "typeId": "convoy",   "playerId": 1, "q": 0,  "r": 11 },
+      { "typeId": "convoy",   "playerId": 1, "q": 1,  "r": 8 },
+      { "typeId": "infantry", "playerId": 2, "q": 11, "r": 14 },
+      { "typeId": "infantry", "playerId": 2, "q": 11, "r": 13 },
+      { "typeId": "infantry", "playerId": 2, "q": 10, "r": 13 },
+      { "typeId": "convoy",   "playerId": 2, "q": 9,  "r": 14 },
+      { "typeId": "convoy",   "playerId": 2, "q": 9,  "r": 15 },
+      { "typeId": "infantry", "playerId": 2, "q": 19, "r": -1 },
+      { "typeId": "infantry", "playerId": 2, "q": 18, "r": 0 },
+      { "typeId": "infantry", "playerId": 2, "q": 18, "r": 1 },
+      { "typeId": "convoy",   "playerId": 2, "q": 19, "r": 1 },
+      { "typeId": "convoy",   "playerId": 2, "q": 17, "r": 1 }
+    ],
+    "tiles": [
+      { "q": 9,  "r": -4,  "features": ["Base"],     "baseForPlayerId": 1 },
+      { "q": 0,  "r": 10,  "features": ["Base"],     "baseForPlayerId": 1 },
+      { "q": 10, "r": 14,  "features": ["Base"],     "baseForPlayerId": 2 },
+      { "q": 19, "r": 0,   "features": ["Base"],     "baseForPlayerId": 2 },
+      { "q": 9,  "r": -2,  "features": ["Facility"] },
+      { "q": 2,  "r": 10,  "features": ["Facility"] },
+      { "q": 10, "r": 12,  "features": ["Facility"] },
+      { "q": 17, "r": 0,   "features": ["Facility"] },
+      { "q": 0,  "r": 0,   "features": ["Depot"] },
+      { "q": 19, "r": -9,  "features": ["Depot"] },
+      { "q": 0,  "r": 19,  "features": ["Depot"] },
+      { "q": 19, "r": 10,  "features": ["Depot"] },
+      { "q": 5,  "r": 3,   "features": ["Depot"] },
+      { "q": 14, "r": -2,  "features": ["Depot"] },
+      { "q": 5,  "r": 12,  "features": ["Depot"] },
+      { "q": 15, "r": 7,   "features": ["Depot"] },
+      { "q": 10, "r": 5,   "features": ["Depot"] }
+    ]
+  }
+}

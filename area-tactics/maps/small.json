@@ -1,0 +1,21 @@
+{
+  "meta": {
+    "name": "small",
+    "label": "Small (10×10)"
+  },
+  "data": {
+    "grid": { "type": "rect", "cols": 10, "rows": 10 },
+    "unitCapacity": { "1": 6, "2": 6 },
+    "units": [
+      { "typeId": "infantry", "playerId": 1, "q": 0, "r": 0 },
+      { "typeId": "infantry", "playerId": 1, "q": 0, "r": 2 },
+      { "typeId": "infantry", "playerId": 1, "q": 0, "r": 4 },
+      { "typeId": "mortar",   "playerId": 1, "q": 1, "r": 1 },
+      { "typeId": "infantry", "playerId": 2, "q": 9, "r": 1 },
+      { "typeId": "infantry", "playerId": 2, "q": 9, "r": 3 },
+      { "typeId": "infantry", "playerId": 2, "q": 9, "r": 5 },
+      { "typeId": "mortar",   "playerId": 2, "q": 8, "r": 4 }
+    ],
+    "tiles": []
+  }
+}
