@@ -64,12 +64,11 @@ A unit can be moved multiple times during a turn, but the allowed range is alway
 
 ### Ending Your Turn
 
-Click **End Turn** (top-right). At that moment:
+Click **End Turn** (top-right) to pass the turn to your opponent. Effects do **not** resolve at the moment you end your turn. At the **start of each player's turn**, the following happen in order:
 
-1. All your units that are in range of enemy units deal damage.
-2. Your units regenerate energy: **1** if not under enemy influence, **+1** more if on a supported tile (0 if under fire and unsupported).
-3. Any build orders you placed this turn are checked and the new unit spawns (if conditions are still met).
-4. The next player's turn begins.
+1. Any build orders placed during the previous turn are checked and the new unit spawns (if conditions are still met).
+2. That player's units deal damage to all enemies within their range.
+3. That player's units regenerate energy.
 
 ---
 
@@ -204,11 +203,11 @@ Support grants **+1 energy regeneration per turn** to units on supported tiles. 
 
 ## Victory
 
-A player wins when **all opponent units are destroyed**, or when **all of the opponent's bases are simultaneously occupied** by your units at the end of a turn.
+A player wins when **all opponent units are destroyed**, or when **all of the opponent's bases are simultaneously occupied** by your units at the start of a turn.
 
 ### Base Capture
 
-If **all of your bases** are simultaneously occupied by enemy units at the end of any turn, you lose immediately — even if you still have units on the field. Protecting your bases is as important as destroying the enemy.
+If **all of your bases** are simultaneously occupied by enemy units at the start of any turn, you lose immediately — even if you still have units on the field. Protecting your bases is as important as destroying the enemy.
 
 ---
 
