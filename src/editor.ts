@@ -205,6 +205,8 @@ function applyTool(q: number, r: number): void {
         state.removedTiles.delete(key);
       } else {
         state.removedTiles.add(key);
+        state.tiles.delete(key);
+        state.units = state.units.filter((u) => !(u.q === q && u.r === r));
       }
       break;
     case "add-base-p1":
@@ -387,7 +389,7 @@ function setActiveTool(tool: EditorTool): void {
   });
   // Show unit options row only when add-unit is active
   const unitOptsRow = document.getElementById("unit-opts-row")!;
-  unitOptsRow.style.display = tool === "add-unit" ? "" : "none";
+  unitOptsRow.style.display = tool === "add-unit" ? "flex" : "none";
 }
 
 // ============================================================================
