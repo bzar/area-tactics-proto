@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Area Tactics — Map Editor</title>
+  <style>
+    :root {
+      --bg-deep:    #28192f;
+      --bg-panel:   #102f34;
+      --bg-raise:   #22474c;
+      --bg-ui:      #585d81;
+      --border:     #585d81;
+      --border-lo:  #45365d;
+      --text:       #a0d8d7;
+      --text-hi:    #eaeae8;
+      --text-lo:    #668faf;
+      --text-dim:   #5f5f6e;
+      --accent:     #315dcd;
+      --accent-hi:  #7dbefa;
+      --p1:         #315dcd;
+      --p2:         #f87b1b;
+      --red:        #f74a53;
+      --yellow:     #fcc539;
+      --green:      #4cbd56;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; overflow: hidden; font-family: sans-serif; background: var(--bg-deep); color: var(--text-hi); }
+
+    /* ── Layout ── */
+    #layout { display: flex; height: 100vh; }
+
+    /* ── Sidebar ── */
+    #editor-sidebar {
+      width: 270px;
+      flex-shrink: 0;
+      background: var(--bg-panel);
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+    #editor-sidebar h1 {
+      font-size: 15px;
+      font-weight: bold;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: var(--text-lo);
+      padding: 14px 14px 8px;
+      border-bottom: 1px solid var(--border-lo);
+    }
+    .ed-section {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border-lo);
+    }
+    .ed-section h2 {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--text-lo);
+      margin-bottom: 8px;
+    }
+    .ed-section h3 {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      color: var(--text-dim);
+      margin: 8px 0 4px;
+    }
+
+    /* ── Form fields ── */
+    .ed-field { display: flex; flex-direction: column; gap: 3px; margin-bottom: 7px; }
+    .ed-field label { font-size: 11px; color: var(--text-lo); }
+    .ed-input {
+      background: rgba(255,255,255,0.07);
+      border: 1px solid var(--border);
+      color: var(--text-hi);
+      font: 13px sans-serif;
+      padding: 5px 8px;
+      border-radius: 4px;
+      outline: none;
+      width: 100%;
+    }
+    .ed-input:focus { border-color: var(--accent); }
+    .ed-row { display: flex; gap: 8px; }
+    .ed-row .ed-field { flex: 1; }
+
+    /* ── Buttons ── */
+    .ed-btn {
+      width: 100%;
+      padding: 7px 12px;
+      font: bold 12px sans-serif;
+      background: var(--bg-raise);
+      color: var(--text-hi);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      cursor: pointer;
+      text-align: center;
+    }
+    .ed-btn:hover { background: var(--bg-ui); }
+    .ed-btn.danger { border-color: var(--red); color: var(--red); }
+    .ed-btn.danger:hover { background: rgba(247,74,83,0.15); }
+
+    /* ── Tool buttons ── */
+    .tool-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+    .tool-btn {
+      padding: 6px 8px;
+      font: 11px sans-serif;
+      background: rgba(255,255,255,0.05);
+      color: var(--text);
+      border: 1px solid var(--border-lo);
+      border-radius: 4px;
+      cursor: pointer;
+      text-align: left;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .tool-btn:hover { background: rgba(255,255,255,0.1); border-color: var(--border); }
+    .tool-btn.tool-active {
+      background: rgba(49,93,205,0.3);
+      border-color: var(--accent);
+      color: var(--accent-hi);
+      font-weight: bold;
+    }
+    .tool-btn-wide { grid-column: 1 / -1; }
+
+    /* ── Unit opts row ── */
+    #unit-opts-row {
+      display: none;
+      gap: 6px;
+      margin-top: 4px;
+    }
+    #unit-opts-row select {
+      flex: 1;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid var(--border);
+      color: var(--text-hi);
+      font: 12px sans-serif;
+      padding: 4px 6px;
+      border-radius: 4px;
+      outline: none;
+    }
+    #unit-opts-row select:focus { border-color: var(--accent); }
+
+    /* ── Legend ── */
+    .legend { display: flex; flex-direction: column; gap: 4px; }
+    .legend-row { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--text-lo); }
+    .legend-swatch {
+      width: 18px; height: 14px; border-radius: 2px;
+      border: 1px solid rgba(255,255,255,0.2);
+      flex-shrink: 0;
+    }
+
+    /* ── Canvas container ── */
+    #canvas-container { flex: 1; position: relative; overflow: hidden; }
+    #canvas-container canvas { display: block; width: 100% !important; height: 100% !important; }
+  </style>
+</head>
+<body>
+  <div id="layout">
+    <!-- Sidebar -->
+    <aside id="editor-sidebar">
+      <h1>🗺 Map Editor</h1>
+
+      <!-- Map Info -->
+      <div class="ed-section">
+        <h2>Map Info</h2>
+        <div class="ed-field">
+          <label for="ed-name">Name (filename key)</label>
+          <input id="ed-name" type="text" class="ed-input" value="new-map" />
+        </div>
+        <div class="ed-field">
+          <label for="ed-label">Label (display name)</label>
+          <input id="ed-label" type="text" class="ed-input" value="New Map" />
+        </div>
+      </div>
+
+      <!-- Grid Size -->
+      <div class="ed-section">
+        <h2>Grid Size</h2>
+        <div class="ed-row">
+          <div class="ed-field">
+            <label for="ed-cols">Cols</label>
+            <input id="ed-cols" type="number" class="ed-input" value="10" min="1" max="60" />
+          </div>
+          <div class="ed-field">
+            <label for="ed-rows">Rows</label>
+            <input id="ed-rows" type="number" class="ed-input" value="10" min="1" max="60" />
+          </div>
+        </div>
+        <div class="ed-row" style="margin-bottom:6px">
+          <div class="ed-field">
+            <label for="ed-cap1">Unit cap P1</label>
+            <input id="ed-cap1" type="number" class="ed-input" value="10" min="0" />
+          </div>
+          <div class="ed-field">
+            <label for="ed-cap2">Unit cap P2</label>
+            <input id="ed-cap2" type="number" class="ed-input" value="10" min="0" />
+          </div>
+        </div>
+        <button id="ed-resize" class="ed-btn danger">⚠ Resize (may remove content)</button>
+      </div>
+
+      <!-- Tools -->
+      <div class="ed-section">
+        <h2>Tools</h2>
+
+        <div class="tool-grid">
+          <button class="tool-btn tool-btn-wide tool-active" data-tool="none">↔ Pan / Inspect</button>
+          <button class="tool-btn tool-btn-wide" data-tool="remove-tile">✕ Toggle Remove Tile</button>
+        </div>
+
+        <h3>Tile Features</h3>
+        <div class="tool-grid">
+          <button class="tool-btn" data-tool="add-base-p1">★ HQ — P1</button>
+          <button class="tool-btn" data-tool="add-base-p2">★ HQ — P2</button>
+          <button class="tool-btn" data-tool="add-depot">▬ Depot</button>
+          <button class="tool-btn" data-tool="add-facility">⬡ Facility</button>
+          <button class="tool-btn tool-btn-wide" data-tool="clear-feature">✕ Clear Feature</button>
+        </div>
+
+        <h3>Units</h3>
+        <div class="tool-grid">
+          <button class="tool-btn" data-tool="add-unit">+ Add Unit</button>
+          <button class="tool-btn" data-tool="remove-unit">− Remove Unit</button>
+        </div>
+        <div id="unit-opts-row">
+          <select id="ed-unit-player">
+            <option value="1">Player 1</option>
+            <option value="2">Player 2</option>
+          </select>
+          <select id="ed-unit-type"><!-- populated by JS --></select>
+        </div>
+      </div>
+
+      <!-- Legend -->
+      <div class="ed-section">
+        <h2>Legend</h2>
+        <div class="legend">
+          <div class="legend-row">
+            <span class="legend-swatch" style="background:#3d1515"></span>
+            Removed tile (toggle)
+          </div>
+          <div class="legend-row">
+            <span class="legend-swatch" style="background:#3366ee"></span>
+            Player 1 (blue)
+          </div>
+          <div class="legend-row">
+            <span class="legend-swatch" style="background:#ee7722"></span>
+            Player 2 (orange)
+          </div>
+          <div class="legend-row">★ = HQ (Base) &nbsp; ▬ = Depot &nbsp; ⬡ = Facility</div>
+        </div>
+      </div>
+
+      <!-- Import / Export -->
+      <div class="ed-section">
+        <h2>Import / Export</h2>
+        <input type="file" id="ed-import-file" accept=".json" style="display:none" />
+        <div style="display:flex;gap:6px">
+          <button id="ed-import-btn" class="ed-btn" style="flex:1">↑ Import JSON</button>
+          <button id="ed-export-btn" class="ed-btn" style="flex:1">↓ Export JSON</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Canvas area -->
+    <div id="canvas-container"></div>
+  </div>
+
+  <script type="module" src="/src/editor.ts"></script>
+</body>
+</html>
