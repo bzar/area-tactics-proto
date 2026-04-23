@@ -30,7 +30,8 @@ Each player starts with a set of units placed near their base. Units have a **ty
 |------|--------|-----|-------|----------|--------|-----------|------|
 | Infantry | Direct | 0–2 | 4 | 3 | 6 | 10 | 1 |
 | Mortar | Indirect | 3–5 | 10 | 2 | 4 | 5 | 2 |
-| Scout | Direct | 0–4 | 6 | 7 | 10 | 6 | 2 |
+| Scout | Direct | 0–4 | 3 | 7 | 10 | 6 | 2 |
+| Tank | Direct | 0–3 | 7 | 5 | 10 | 15 | 3 |
 | Convoy | Support | 0–4 | 0 | 5 | 5 | 5 | 1 |
 
 ### Unit Stats

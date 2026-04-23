@@ -113,13 +113,24 @@ export function defaultUnitTypes(): Map<string, UnitType> {
   types.set("scout", {
     id: "scout",
     effectType: EffectType.Direct,
-    power: 6,
+    power: 3,
     aoiMin: 0,
     aoiMax: 4,
     maxEnergy: 10,
     maxCondition: 6,
     movement: 7,
     cost: 2,
+  });
+  types.set("tank", {
+    id: "tank",
+    effectType: EffectType.Direct,
+    power: 7,
+    aoiMin: 0,
+    aoiMax: 3,
+    maxEnergy: 10,
+    maxCondition: 15,
+    movement: 5,
+    cost: 3,
   });
   types.set("convoy", {
     id: "convoy",
