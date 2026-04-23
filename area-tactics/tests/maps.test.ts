@@ -127,8 +127,8 @@ describe("spiral map", () => {
   it("spiral map removed tiles are not in bounds", () => {
     const { grid } = loadMap("spiral");
     // These are the two removed corner tiles
-    expect(grid.isInBounds({ q: 0, r: 0 })).toBe(false);
-    expect(grid.isInBounds({ q: 12, r: 5 })).toBe(false);
+    expect(grid.isInBounds({ q: 0, r: 11 })).toBe(false);
+    expect(grid.isInBounds({ q: 12, r: -6 })).toBe(false);
   });
 
   it("spiral map has unit capacity of 20 per player", () => {
@@ -172,17 +172,17 @@ describe("spiral map", () => {
     );
     expect(p1Base).toBeDefined();
     expect(p2Base).toBeDefined();
-    // P1 base is at bottom-left, P2 base is at top-right
-    expect(p1Base!.position).toEqual({ q: 0, r: 11 });
-    expect(p2Base!.position).toEqual({ q: 12, r: -6 });
+    // P1 base is at top-left, P2 base is at bottom-right
+    expect(p1Base!.position).toEqual({ q: 0, r: 0 });
+    expect(p2Base!.position).toEqual({ q: 12, r: 5 });
   });
 
-  it("spiral map has facilities and depots", () => {
+  it("spiral map has 6 facilities and 12 depots", () => {
     const { tilePlacements } = loadMap("spiral");
     const facilities = tilePlacements?.filter((t) => t.features.includes("Facility" as never));
     const depots = tilePlacements?.filter((t) => t.features.includes("Depot" as never));
-    expect(facilities?.length).toBeGreaterThan(0);
-    expect(depots?.length).toBeGreaterThan(0);
+    expect(facilities?.length).toBe(6);
+    expect(depots?.length).toBe(12);
   });
 });
 
