@@ -1,5 +1,5 @@
 import * as PIXI from "pixi.js";
-import { colors } from './palette.js';
+import { colors, palette } from './palette.js';
 import { loadMap, listMaps, defaultUnitTypes, createGameFromMap } from "area-tactics";
 import { GameProcessor, GameFeatures } from "area-tactics";
 import { InputProcessor } from "./input";
@@ -18,130 +18,27 @@ import {
 import { runBot } from "./bot";
 import { OnlineClient, DEFAULT_SERVER_URL, gameProcessorFromServerState } from "./online";
 import type { GameListEntry, MapListEntry } from "./online";
+import {
+  computeHexSize,
+  hexCenter,
+  hexCorners,
+  pixelToHex,
+  C,
+  UNIT_LABEL,
+  CLAIMED_P1,
+  CLAIMED_P2,
+  CLAIMED_CONTESTED,
+  drawTileFeatureMarkers,
+} from "./render.js";
 
-// ============================================================================
-// Hex math — flat-top orientation
-// ============================================================================
+/** Convert a CSS hex color string to a PIXI number. */
+function cssHex(s: string): number {
+  return parseInt(s.replace("#", ""), 16);
+}
 
 // Scale hex size so the game is legible on smaller retina screens.
 // Reference: 28px at 1600px+ viewport width; inversely scales for narrower screens.
-function computeHexSize(): number {
-  return Math.max(28, Math.min(44, Math.round((1600 * 28) / Math.max(window.innerWidth, 900))));
-}
 let HEX_SIZE = computeHexSize();
-const SQRT3 = Math.sqrt(3);
-const WORLD_ORIGIN_X = 50;
-const WORLD_ORIGIN_Y = 50;
-
-function hexCenter(q: number, r: number): [number, number] {
-  return [WORLD_ORIGIN_X + HEX_SIZE * 1.5 * q, WORLD_ORIGIN_Y + HEX_SIZE * SQRT3 * (r + q / 2)];
-}
-
-function hexCorners(cx: number, cy: number): number[] {
-  const pts: number[] = [];
-  for (let i = 0; i < 6; i++) {
-    const a = (Math.PI / 3) * i;
-    pts.push(cx + (HEX_SIZE - 1) * Math.cos(a), cy + (HEX_SIZE - 1) * Math.sin(a));
-  }
-  return pts;
-}
-
-function pixelToHex(px: number, py: number): [number, number] {
-  const fq = (px - WORLD_ORIGIN_X) / (HEX_SIZE * 1.5);
-  const fr = (py - WORLD_ORIGIN_Y) / (HEX_SIZE * SQRT3) - fq / 2;
-  const fs = -fq - fr;
-  let rq = Math.round(fq),
-    rr = Math.round(fr);
-  const rs = Math.round(fs);
-  const dq = Math.abs(rq - fq),
-    dr = Math.abs(rr - fr),
-    ds = Math.abs(rs - fs);
-  if (dq > dr && dq > ds) rq = -rr - rs;
-  else if (dr > ds) rr = -rq - rs;
-  return [rq, rr];
-}
-
-// ============================================================================
-// HSL utilities — for claim fill tinting
-// ============================================================================
-
-function rgbToHsl(hex: number): [number, number, number] {
-  const r = ((hex >> 16) & 0xff) / 255;
-  const g = ((hex >> 8) & 0xff) / 255;
-  const b = (hex & 0xff) / 255;
-  const max = Math.max(r, g, b),
-    min = Math.min(r, g, b);
-  const l = (max + min) / 2;
-  if (max === min) return [0, 0, l];
-  const d = max - min;
-  const s = d / (1 - Math.abs(2 * l - 1));
-  let h = 0;
-  if (max === r) h = ((g - b) / d + 6) % 6;
-  else if (max === g) h = (b - r) / d + 2;
-  else h = (r - g) / d + 4;
-  return [h / 6, s, l];
-}
-
-function hslToHex(h: number, s: number, l: number): number {
-  const f = (p: number, q: number, t: number) => {
-    if (t < 0) t += 1;
-    if (t > 1) t -= 1;
-    if (t < 1 / 6) return p + (q - p) * 6 * t;
-    if (t < 1 / 2) return q;
-    if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
-    return p;
-  };
-  const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-  const p = 2 * l - q;
-  const r = Math.round(f(p, q, h + 1 / 3) * 255);
-  const g = Math.round(f(p, q, h) * 255);
-  const bv = Math.round(f(p, q, h - 1 / 3) * 255);
-  return (r << 16) | (g << 8) | bv;
-}
-
-// Build per-player claimed fill: player H+S, hexFill L
-function buildClaimedFill(playerHex: number, baseHex: number): number {
-  const [h, s] = rgbToHsl(playerHex);
-  const [, , l] = rgbToHsl(baseHex);
-  return hslToHex(h, s, l);
-}
-
-// ============================================================================
-// Colors and labels
-// ============================================================================
-
-const C = {
-  bg: 0x1a1a2e,
-  hexFill: 0x1e2847,
-  hexHover: 0x253060,
-  hexStroke: 0x334466,
-  validMove: 0x1a4d2e,
-  selected: 0x4d3a00,
-  p1: 0x3366ee,
-  p2: 0xee7722,   // orange — blue/orange pair is accessible for all colorblindness types
-  selectRing: 0xffcc00,
-  influenceRing: 0xffffaa,
-  tickerHighlight: 0xffffff,
-  energy: 0x00ccee,    // cyan  — visually distinct from player blue/orange
-  condition: 0x44cc55, // green — visually distinct from cyan; universal health-bar convention
-  barBg: 0x111827,
-};
-
-const UNIT_LABEL: Record<string, string> = {
-  infantry: "I",
-  mortar: "M",
-  scout: "S",
-  convoy: "C",
-};
-
-// Claimed tile fill colors: player H+S blended with hexFill L.
-// Contested: midpoint of both player fills in RGB space.
-const CLAIMED_P1 = buildClaimedFill(C.p1, C.hexFill);
-const CLAIMED_P2 = buildClaimedFill(C.p2, C.hexFill);
-const CLAIMED_CONTESTED =
-  (((((CLAIMED_P1 >> 16) & 0xff) + ((CLAIMED_P2 >> 16) & 0xff)) >> 1) << 16) |
-  (((((CLAIMED_P1 >> 8) & 0xff) + ((CLAIMED_P2 >> 8) & 0xff)) >> 1) << 8) |
-  (((CLAIMED_P1 & 0xff) + (CLAIMED_P2 & 0xff)) >> 1);
 
 const PLAYER_CSS: Record<number, string> = {
   1: colors.p1,
@@ -368,21 +265,21 @@ function drawRelations() {
 
     // Each base → units / convoys within its 3-tile radius that are supported
     basePosArr.forEach((basePos) => {
-      const [bx, by] = hexCenter(basePos.q, basePos.r);
+      const [bx, by] = hexCenter(basePos.q, basePos.r, HEX_SIZE);
       const baseRadius = new Set(game.map.grid.tilesInRange(basePos, 0, 3).map(positionKey));
       nonConvoys.forEach((unit) => {
         const unitKey = positionKey(unit.position);
         if (!baseRadius.has(unitKey) || !supportedTiles.has(unitKey)) return;
-        const [ux, uy] = hexCenter(unit.position.q, unit.position.r);
-        relationsGfx.lineStyle(1.5, 0x00ccff, 0.45);
+        const [ux, uy] = hexCenter(unit.position.q, unit.position.r, HEX_SIZE);
+        relationsGfx.lineStyle(1.5, cssHex(palette.cyanLight), 0.45);
         relationsGfx.moveTo(bx, by);
         relationsGfx.lineTo(ux, uy);
       });
       convoys.forEach((convoy) => {
         const cKey = positionKey(convoy.position);
         if (!baseRadius.has(cKey) || !supportedTiles.has(cKey)) return;
-        const [cx, cy] = hexCenter(convoy.position.q, convoy.position.r);
-        relationsGfx.lineStyle(2.5, 0x00ccff, 0.6);
+        const [cx, cy] = hexCenter(convoy.position.q, convoy.position.r, HEX_SIZE);
+        relationsGfx.lineStyle(2.5, cssHex(palette.cyanLight), 0.6);
         relationsGfx.moveTo(bx, by);
         relationsGfx.lineTo(cx, cy);
       });
@@ -392,7 +289,7 @@ function drawRelations() {
     convoys.forEach((convoy) => {
       const cKey = positionKey(convoy.position);
       if (!supportedTiles.has(cKey)) return; // convoy itself must be supported
-      const [cvx, cvy] = hexCenter(convoy.position.q, convoy.position.r);
+      const [cvx, cvy] = hexCenter(convoy.position.q, convoy.position.r, HEX_SIZE);
       const convoyAoi = new Set(
         game.map.grid
           .tilesInRange(
@@ -405,8 +302,8 @@ function drawRelations() {
       nonConvoys.forEach((unit) => {
         const unitKey = positionKey(unit.position);
         if (supportedTiles.has(unitKey) && convoyAoi.has(unitKey)) {
-          const [ux, uy] = hexCenter(unit.position.q, unit.position.r);
-          relationsGfx.lineStyle(1.5, 0x00ccff, 0.45);
+          const [ux, uy] = hexCenter(unit.position.q, unit.position.r, HEX_SIZE);
+          relationsGfx.lineStyle(1.5, cssHex(palette.cyanLight), 0.45);
           relationsGfx.moveTo(cvx, cvy);
           relationsGfx.lineTo(ux, uy);
         }
@@ -415,8 +312,8 @@ function drawRelations() {
         if (other.id === convoy.id) return;
         const otherKey = positionKey(other.position);
         if (supportedTiles.has(otherKey) && convoyAoi.has(otherKey)) {
-          const [ox, oy] = hexCenter(other.position.q, other.position.r);
-          relationsGfx.lineStyle(2.5, 0x00ccff, 0.6);
+          const [ox, oy] = hexCenter(other.position.q, other.position.r, HEX_SIZE);
+          relationsGfx.lineStyle(2.5, cssHex(palette.cyanLight), 0.6);
           relationsGfx.moveTo(cvx, cvy);
           relationsGfx.lineTo(ox, oy);
         }
@@ -440,13 +337,13 @@ function drawRelations() {
       const ut = unitTypes.get(attacker.typeId);
       if (!ut || ut.power === 0) return;
 
-      const [ax, ay] = hexCenter(attacker.position.q, attacker.position.r);
+      const [ax, ay] = hexCenter(attacker.position.q, attacker.position.r, HEX_SIZE);
 
       influences.getUnitsInfluencedBy(attacker.id).forEach((targetId) => {
         const target = allUnitsById.get(targetId);
         if (!target || target.playerId === player.id || target.underConstruction) return;
 
-        const [bx, by] = hexCenter(target.position.q, target.position.r);
+        const [bx, by] = hexCenter(target.position.q, target.position.r, HEX_SIZE);
         const dx = bx - ax;
         const dy = by - ay;
         const len = Math.sqrt(dx * dx + dy * dy);
@@ -483,7 +380,7 @@ function render() {
     : new Set();
 
   for (const { q, r } of grid.getTiles()) {
-    const [cx, cy] = hexCenter(q, r);
+    const [cx, cy] = hexCenter(q, r, HEX_SIZE);
     const isValid = validDests.some(([vq, vr]) => vq === q && vr === r);
     const isHovered = hoveredPos !== null && hoveredPos.q === q && hoveredPos.r === r;
     const key = positionKey({ q, r });
@@ -505,65 +402,12 @@ function render() {
     }
     mapGfx.lineStyle(strokeWidth, strokeColor);
     mapGfx.beginFill(fill);
-    mapGfx.drawPolygon(hexCorners(cx, cy));
+    mapGfx.drawPolygon(hexCorners(cx, cy, HEX_SIZE));
     mapGfx.endFill();
   }
 
   // --- Tile features ---
-  game.map.tiles.forEach((tile, key) => {
-    const pos = (() => {
-      // Reconstruct position from key "q,r"
-      const [q, r] = key.split(",").map(Number);
-      return { q, r };
-    })();
-    const [cx, cy] = hexCenter(pos.q, pos.r);
-
-    for (const feature of tile.features) {
-      if (feature === TileFeature.Base) {
-        // 5-pointed star, colored by owning player
-        const color =
-          tile.baseForPlayerId === 1 ? C.p1 : tile.baseForPlayerId === 2 ? C.p2 : 0xffffff;
-        const outerR = HEX_SIZE * 0.32,
-          innerR = HEX_SIZE * 0.13;
-        const pts: number[] = [];
-        for (let i = 0; i < 10; i++) {
-          const a = (Math.PI / 5) * i - Math.PI / 2;
-          const r = i % 2 === 0 ? outerR : innerR;
-          pts.push(cx + r * Math.cos(a), cy + r * Math.sin(a));
-        }
-        mapGfx.lineStyle(1, 0xffffff, 0.5);
-        mapGfx.beginFill(color, 0.85);
-        mapGfx.drawPolygon(pts);
-        mapGfx.endFill();
-      } else if (feature === TileFeature.Depot) {
-        // Wide flat rectangle — gold if directly and uniquely claimed, else grey
-        const claimList = claims.get(key);
-        const directUnique = claimList?.length === 1 && claimList[0].claimType === ClaimType.Direct;
-        const color = directUnique ? (claimList![0].playerId === 1 ? C.p1 : C.p2) : 0x777788;
-        const w = HEX_SIZE * 0.72,
-          h = HEX_SIZE * 0.22;
-        mapGfx.lineStyle(1, 0xffffff, 0.4);
-        mapGfx.beginFill(color, 0.85);
-        mapGfx.drawRect(cx - w / 2, cy - h / 2, w, h);
-        mapGfx.endFill();
-      } else if (feature === TileFeature.Facility) {
-        // Small hexagon — teal if directly and uniquely claimed, else grey
-        const claimList = claims.get(key);
-        const directUnique = claimList?.length === 1 && claimList[0].claimType === ClaimType.Direct;
-        const color = directUnique ? (claimList![0].playerId === 1 ? C.p1 : C.p2) : 0x777788;
-        const r = HEX_SIZE * 0.34;
-        const pts: number[] = [];
-        for (let i = 0; i < 6; i++) {
-          const a = (Math.PI / 3) * i;
-          pts.push(cx + r * Math.cos(a), cy + r * Math.sin(a));
-        }
-        mapGfx.lineStyle(1.5, 0xffffff, 0.5);
-        mapGfx.beginFill(color, 0.85);
-        mapGfx.drawPolygon(pts);
-        mapGfx.endFill();
-      }
-    }
-  });
+  drawTileFeatureMarkers(mapGfx, game.map.tiles, claims, HEX_SIZE);
 
   // --- Units ---
   const unitRadius = HEX_SIZE * 0.48;
@@ -574,7 +418,7 @@ function render() {
   game.players.forEach((player) => {
     const pColor = player.id === 1 ? C.p1 : C.p2;
     player.units.forEach((unit) => {
-      const [cx, cy] = hexCenter(unit.position.q, unit.position.r);
+      const [cx, cy] = hexCenter(unit.position.q, unit.position.r, HEX_SIZE);
       const isSelected = unit.id === selectedUnitId;
       const ut = unitTypes.get(unit.typeId)!;
 
@@ -644,7 +488,7 @@ function render() {
     let alive = false;
     game.players.forEach((p) => { if (p.units.has(uid)) alive = true; });
     if (!alive) {
-      const [cx, cy] = hexCenter(pos.q, pos.r);
+      const [cx, cy] = hexCenter(pos.q, pos.r, HEX_SIZE);
       unitGfx.lineStyle(2, C.tickerHighlight, 0.6);
       unitGfx.drawCircle(cx, cy, unitRadius + 7);
     }
@@ -1021,7 +865,7 @@ canvas.addEventListener("pointermove", (e) => {
     const rect = canvas.getBoundingClientRect();
     const wx = e.clientX - rect.left - world.x;
     const wy = e.clientY - rect.top - world.y;
-    const [q, r] = pixelToHex(wx, wy);
+    const [q, r] = pixelToHex(wx, wy, HEX_SIZE);
     const newPos = game.map.grid.isInBounds(createPosition(q, r)) ? { q, r } : null;
     const oldKey = hoveredPos ? positionKey(hoveredPos) : null;
     const newKey = newPos ? positionKey(newPos) : null;
@@ -1038,7 +882,7 @@ canvas.addEventListener("pointerup", (e) => {
     const rect = canvas.getBoundingClientRect();
     const wx = e.clientX - rect.left - world.x;
     const wy = e.clientY - rect.top - world.y;
-    const [q, r] = pixelToHex(wx, wy);
+    const [q, r] = pixelToHex(wx, wy, HEX_SIZE);
     const pos = createPosition(q, r);
     if (game.map.grid.isInBounds(pos)) {
       // On touch, pointermove doesn't update hoveredPos — do it here so
