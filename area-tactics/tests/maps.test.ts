@@ -75,11 +75,12 @@ describe("loadMap", () => {
 });
 
 describe("defaultUnitTypes", () => {
-  it("provides all four unit types", () => {
+  it("provides all five unit types", () => {
     const types = defaultUnitTypes();
     expect(types.has("infantry")).toBe(true);
     expect(types.has("mortar")).toBe(true);
     expect(types.has("scout")).toBe(true);
+    expect(types.has("tank")).toBe(true);
     expect(types.has("convoy")).toBe(true);
   });
 });
