@@ -791,6 +791,7 @@ function handleServerMessage(msg: any): void {
     tickerClear();
     world.x = 0;
     world.y = 0;
+    world.scale.set(1);
     updateHUD();
     render();
     updateUnitInfo();
@@ -827,23 +828,62 @@ function handleServerMessage(msg: any): void {
 }
 
 // ============================================================================
-// Pan / click input
+// Pan / zoom / click input
 // ============================================================================
 
 const canvas = app.view as HTMLCanvasElement;
+
+const MIN_ZOOM = 0.25;
+const MAX_ZOOM = 4;
+
+function applyZoom(newZoom: number, pivotX: number, pivotY: number): void {
+  const clampedZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, newZoom));
+  const ratio = clampedZoom / world.scale.x;
+  world.x = pivotX - ratio * (pivotX - world.x);
+  world.y = pivotY - ratio * (pivotY - world.y);
+  world.scale.set(clampedZoom);
+}
 
 let panStart: { x: number; y: number; wx: number; wy: number } | null = null;
 let dragging = false;
 let dragThreshold = 5;
 
+// Pinch-to-zoom state
+const activePointers = new Map<number, { x: number; y: number }>();
+let pinchStartDist = 0;
+let pinchStartZoom = 1;
+
 canvas.addEventListener("pointerdown", (e) => {
-  panStart = { x: e.clientX, y: e.clientY, wx: world.x, wy: world.y };
+  activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (activePointers.size === 2) {
+    // Start pinch
+    const pts = Array.from(activePointers.values());
+    pinchStartDist = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
+    pinchStartZoom = world.scale.x;
+    panStart = null;
+  } else {
+    panStart = { x: e.clientX, y: e.clientY, wx: world.x, wy: world.y };
+  }
   dragging = false;
   dragThreshold = e.pointerType === "touch" ? 15 : 5;
   canvas.setPointerCapture(e.pointerId);
 });
 
 canvas.addEventListener("pointermove", (e) => {
+  activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+  if (activePointers.size === 2) {
+    // Pinch zoom
+    const pts = Array.from(activePointers.values());
+    const dist = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
+    const midX = (pts[0].x + pts[1].x) / 2;
+    const midY = (pts[0].y + pts[1].y) / 2;
+    const rect = canvas.getBoundingClientRect();
+    applyZoom(pinchStartZoom * (dist / pinchStartDist), midX - rect.left, midY - rect.top);
+    dragging = true;
+    return;
+  }
+
   if (panStart) {
     const dx = e.clientX - panStart.x;
     const dy = e.clientY - panStart.y;
@@ -859,8 +899,8 @@ canvas.addEventListener("pointermove", (e) => {
   // Only update hover from pointermove for non-touch (mouse/pen)
   if (!dragging && e.pointerType !== "touch") {
     const rect = canvas.getBoundingClientRect();
-    const wx = e.clientX - rect.left - world.x;
-    const wy = e.clientY - rect.top - world.y;
+    const wx = (e.clientX - rect.left - world.x) / world.scale.x;
+    const wy = (e.clientY - rect.top - world.y) / world.scale.y;
     const [q, r] = pixelToHex(wx, wy, HEX_SIZE);
     const newPos = game.map.grid.isInBounds(createPosition(q, r)) ? { q, r } : null;
     const oldKey = hoveredPos ? positionKey(hoveredPos) : null;
@@ -874,10 +914,11 @@ canvas.addEventListener("pointermove", (e) => {
 });
 
 canvas.addEventListener("pointerup", (e) => {
+  activePointers.delete(e.pointerId);
   if (!dragging && panStart) {
     const rect = canvas.getBoundingClientRect();
-    const wx = e.clientX - rect.left - world.x;
-    const wy = e.clientY - rect.top - world.y;
+    const wx = (e.clientX - rect.left - world.x) / world.scale.x;
+    const wy = (e.clientY - rect.top - world.y) / world.scale.y;
     const [q, r] = pixelToHex(wx, wy, HEX_SIZE);
     const pos = createPosition(q, r);
     if (game.map.grid.isInBounds(pos)) {
@@ -917,7 +958,25 @@ canvas.addEventListener("pointerup", (e) => {
   }
   panStart = null;
   dragging = false;
+  // Re-anchor pan so dragging after pinch doesn't jump
+  if (activePointers.size === 1) {
+    const [ptr] = Array.from(activePointers.values());
+    panStart = { x: ptr.x, y: ptr.y, wx: world.x, wy: world.y };
+  }
 });
+
+canvas.addEventListener("pointercancel", (e) => {
+  activePointers.delete(e.pointerId);
+  panStart = null;
+  dragging = false;
+});
+
+canvas.addEventListener("wheel", (e) => {
+  e.preventDefault();
+  const rect = canvas.getBoundingClientRect();
+  const factor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
+  applyZoom(world.scale.x * factor, e.clientX - rect.left, e.clientY - rect.top);
+}, { passive: false });
 
 document.getElementById("end-turn-btn")!.addEventListener("click", () => {
   if (!isMyTurn()) return;
@@ -956,6 +1015,7 @@ document.getElementById("start-btn")!.addEventListener("click", () => {
   hoveredPos = null;
   world.x = 0;
   world.y = 0;
+  world.scale.set(1);
   tickerClear();
   document.getElementById("new-game")!.classList.remove("visible");
   updateHUD();

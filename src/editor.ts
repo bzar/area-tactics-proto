@@ -393,22 +393,62 @@ function setActiveTool(tool: EditorTool): void {
 }
 
 // ============================================================================
-// Pan + click input
+// Pan + zoom + click input
 // ============================================================================
 
 const canvas = app.view as HTMLCanvasElement;
+
+const MIN_ZOOM = 0.25;
+const MAX_ZOOM = 4;
+
+function applyZoom(newZoom: number, pivotX: number, pivotY: number): void {
+  const clampedZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, newZoom));
+  const ratio = clampedZoom / world.scale.x;
+  world.x = pivotX - ratio * (pivotX - world.x);
+  world.y = pivotY - ratio * (pivotY - world.y);
+  world.scale.set(clampedZoom);
+}
+
 let panStart: { x: number; y: number; wx: number; wy: number } | null = null;
 let dragging = false;
 let dragThreshold = 5;
 
+// Pinch-to-zoom state
+const activePointers = new Map<number, { x: number; y: number }>();
+let pinchStartDist = 0;
+let pinchStartZoom = 1;
+
 canvas.addEventListener("pointerdown", (e) => {
-  panStart = { x: e.clientX, y: e.clientY, wx: world.x, wy: world.y };
+  activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (activePointers.size === 2) {
+    // Start pinch
+    const pts = Array.from(activePointers.values());
+    pinchStartDist = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
+    pinchStartZoom = world.scale.x;
+    panStart = null;
+  } else {
+    panStart = { x: e.clientX, y: e.clientY, wx: world.x, wy: world.y };
+  }
   dragging = false;
   dragThreshold = e.pointerType === "touch" ? 15 : 5;
   canvas.setPointerCapture(e.pointerId);
 });
 
 canvas.addEventListener("pointermove", (e) => {
+  activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+  if (activePointers.size === 2) {
+    // Pinch zoom
+    const pts = Array.from(activePointers.values());
+    const dist = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
+    const midX = (pts[0].x + pts[1].x) / 2;
+    const midY = (pts[0].y + pts[1].y) / 2;
+    const rect = canvas.getBoundingClientRect();
+    applyZoom(pinchStartZoom * (dist / pinchStartDist), midX - rect.left, midY - rect.top);
+    dragging = true;
+    return;
+  }
+
   if (panStart) {
     const dx = e.clientX - panStart.x;
     const dy = e.clientY - panStart.y;
@@ -423,8 +463,8 @@ canvas.addEventListener("pointermove", (e) => {
 
   if (!dragging && e.pointerType !== "touch") {
     const rect = canvas.getBoundingClientRect();
-    const wx = e.clientX - rect.left - world.x;
-    const wy = e.clientY - rect.top - world.y;
+    const wx = (e.clientX - rect.left - world.x) / world.scale.x;
+    const wy = (e.clientY - rect.top - world.y) / world.scale.y;
     const [q, r] = pixelToHex(wx, wy, HEX_SIZE);
     const newInGrid = isInGrid(q, r);
     const newPos = newInGrid ? { q, r } : null;
@@ -438,10 +478,11 @@ canvas.addEventListener("pointermove", (e) => {
 });
 
 canvas.addEventListener("pointerup", (e) => {
+  activePointers.delete(e.pointerId);
   if (!dragging && panStart && activeTool !== "none") {
     const rect = canvas.getBoundingClientRect();
-    const wx = e.clientX - rect.left - world.x;
-    const wy = e.clientY - rect.top - world.y;
+    const wx = (e.clientX - rect.left - world.x) / world.scale.x;
+    const wy = (e.clientY - rect.top - world.y) / world.scale.y;
     const [q, r] = pixelToHex(wx, wy, HEX_SIZE);
     if (isInGrid(q, r)) {
       applyTool(q, r);
@@ -449,7 +490,25 @@ canvas.addEventListener("pointerup", (e) => {
   }
   panStart = null;
   dragging = false;
+  if (activePointers.size === 1) {
+    // Re-anchor pan after pinch releases one finger
+    const [ptr] = Array.from(activePointers.values());
+    panStart = { x: ptr.x, y: ptr.y, wx: world.x, wy: world.y };
+  }
 });
+
+canvas.addEventListener("pointercancel", (e) => {
+  activePointers.delete(e.pointerId);
+  panStart = null;
+  dragging = false;
+});
+
+canvas.addEventListener("wheel", (e) => {
+  e.preventDefault();
+  const rect = canvas.getBoundingClientRect();
+  const factor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
+  applyZoom(world.scale.x * factor, e.clientX - rect.left, e.clientY - rect.top);
+}, { passive: false });
 
 canvas.addEventListener("mouseleave", () => {
   hoveredPos = null;
