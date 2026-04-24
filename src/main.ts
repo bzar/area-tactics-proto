@@ -958,12 +958,10 @@ canvas.addEventListener("pointerup", (e) => {
   }
   panStart = null;
   dragging = false;
-  if (activePointers.size < 2) {
-    // Re-anchor pan so dragging after pinch doesn't jump
-    if (activePointers.size === 1) {
-      const [ptr] = Array.from(activePointers.values());
-      panStart = { x: ptr.x, y: ptr.y, wx: world.x, wy: world.y };
-    }
+  // Re-anchor pan so dragging after pinch doesn't jump
+  if (activePointers.size === 1) {
+    const [ptr] = Array.from(activePointers.values());
+    panStart = { x: ptr.x, y: ptr.y, wx: world.x, wy: world.y };
   }
 });
 
