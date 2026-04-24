@@ -97,20 +97,20 @@ export function buildClaimedFill(playerHex: number, baseHex: number): number {
 // ============================================================================
 
 export const C = {
-  bg:             cssHex(palette.blackPurple),  // deepest background
-  hexFill:        cssHex(palette.blackTeal),    // normal hex tile fill
-  hexHover:       cssHex(palette.deepTeal),     // hovered hex fill
-  hexStroke:      cssHex(palette.deepSlate),    // hex border
-  validMove:      cssHex(palette.forestGreen),  // valid move destination
-  selected:       cssHex(palette.plumDark),     // selection background (unused; reserved)
-  p1:             cssHex(palette.blue),         // player 1 — matches CSS --p1
-  p2:             cssHex(palette.orange),       // player 2 — matches CSS --p2
-  selectRing:     cssHex(palette.gold),         // unit selection ring
-  influenceRing:  cssHex(palette.yellowLight),  // influence-range hover ring
-  tickerHighlight: cssHex(palette.white),       // ticker hover / ghost ring
-  energy:         cssHex(palette.cyan),         // energy bar (cyan)
-  condition:      cssHex(palette.green),        // condition bar (green)
-  barBg:          cssHex(palette.blackPurple),  // stat-bar background
+  bg:              0x1a1a2e,  // deepest background
+  hexFill:         0x1e2847,  // normal hex tile fill
+  hexHover:        0x253060,  // hovered hex fill
+  hexStroke:       0x334466,  // hex border
+  validMove:       0x1a4d2e,  // valid move destination
+  selected:        0x4d3a00,  // selection background (unused; reserved)
+  p1:              0x3366ee,  // player 1 (blue)
+  p2:              0xee7722,  // player 2 (orange) — blue/orange pair is accessible for all colorblindness types
+  selectRing:      0xffcc00,  // unit selection ring
+  influenceRing:   0xffffaa,  // influence-range hover ring
+  tickerHighlight: 0xffffff,  // ticker hover / ghost ring
+  energy:          0x00ccee,  // energy bar (cyan) — visually distinct from player blue/orange
+  condition:       0x44cc55,  // condition bar (green) — visually distinct from cyan; universal health-bar convention
+  barBg:           0x111827,  // stat-bar background
 };
 
 export const UNIT_LABEL: Record<string, string> = {

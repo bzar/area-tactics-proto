@@ -10,7 +10,7 @@ COPY server/package.json ./server/
 COPY src/ ./src/
 COPY public/ ./public/
 COPY scripts/ ./scripts/
-COPY MANUAL.md index.html vite.config.ts ./
+COPY MANUAL.md index.html editor.html vite.config.ts ./
 
 RUN npm ci
 # VITE_SERVER_URL is intentionally left unset here — the server injects the
