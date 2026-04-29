@@ -138,6 +138,7 @@ function handleGetState(
       unitCapacity: game.map.unitCapacity
         ? Array.from(game.map.unitCapacity.entries())
         : undefined,
+      turnStartPositions: Array.from(processor.getTurnStartPositions().entries()),
     })
   );
 }

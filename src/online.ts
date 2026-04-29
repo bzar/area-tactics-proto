@@ -180,7 +180,10 @@ export function gameProcessorFromServerState(msg: any): {
   };
 
   const unitTypes = new Map<string, UnitType>(msg.unitTypes as [string, UnitType][]);
-  const processor = new GameProcessor(game, unitTypes, msg.features as GameFeatures);
+  const turnStartPositions = msg.turnStartPositions
+    ? new Map<UnitId, Position>(msg.turnStartPositions as [number, Position][])
+    : undefined;
+  const processor = new GameProcessor(game, unitTypes, msg.features as GameFeatures, turnStartPositions);
 
   return { processor, myGamePlayerId: msg.myGamePlayerId as number };
 }
