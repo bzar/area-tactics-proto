@@ -136,6 +136,10 @@ export class GameProcessor {
       };
     }
 
+    if (unit.underConstruction) {
+      return { ok: false, error: { message: "Unit is under construction and cannot be moved" } };
+    }
+
     const unitType = this.unitTypes.get(unit.typeId);
     if (!unitType) {
       return { ok: false, error: { message: `Unknown unit type: ${unit.typeId}` } };
@@ -645,6 +649,7 @@ export class GameProcessor {
     if (!player) return [];
     const unit = player.units.get(unitId);
     if (!unit) return [];
+    if (unit.underConstruction) return [];
     const unitType = this.unitTypes.get(unit.typeId);
     if (!unitType) return [];
     const origin = this.turnStartPositions.get(unitId) ?? unit.position;
