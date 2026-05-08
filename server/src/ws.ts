@@ -121,6 +121,7 @@ function handleGetState(
       myGamePlayerId: gamePlayerSlot,
       currentPlayerId: game.currentPlayerId,
       turn: game.turn,
+      nextUnitId: game.nextUnitId,
       features: processor.getFeatures(),
       unitTypes: Array.from(processor.getUnitTypes().entries()),
       players: Array.from(game.players.entries()).map(([id, p]) => [

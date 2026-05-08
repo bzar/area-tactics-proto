@@ -281,5 +281,5 @@ export function createGameFromMap(
 
   const map: GameMap = { grid: definition.grid, tiles, bases, unitCapacity };
   const currentPlayerId = Array.from(playerIds).sort((a, b) => a - b)[0];
-  return { map, players, currentPlayerId, turn: 1 };
+  return { map, players, currentPlayerId, turn: 1, nextUnitId };
 }

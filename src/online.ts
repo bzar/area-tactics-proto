@@ -177,6 +177,7 @@ export function gameProcessorFromServerState(msg: any): {
     players,
     currentPlayerId: msg.currentPlayerId as number,
     turn: msg.turn as number,
+    nextUnitId: msg.nextUnitId as number,
   };
 
   const unitTypes = new Map<string, UnitType>(msg.unitTypes as [string, UnitType][]);
