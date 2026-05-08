@@ -61,6 +61,7 @@ function makeGame(): { game: Game; p1Unit: Unit; p2Unit: Unit } {
       players,
       currentPlayerId: 1,
       turn: 1,
+      nextUnitId: 10,
     },
     p1Unit,
     p2Unit,

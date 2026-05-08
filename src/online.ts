@@ -172,11 +172,17 @@ export function gameProcessorFromServerState(msg: any): {
     ])
   );
 
+  const nextUnitId =
+    msg.nextUnitId != null
+      ? (msg.nextUnitId as number)
+      : Math.max(0, ...Array.from(players.values()).flatMap((p) => Array.from(p.units.keys()))) + 1;
+
   const game: Game = {
     map: gameMap,
     players,
     currentPlayerId: msg.currentPlayerId as number,
     turn: msg.turn as number,
+    nextUnitId,
   };
 
   const unitTypes = new Map<string, UnitType>(msg.unitTypes as [string, UnitType][]);

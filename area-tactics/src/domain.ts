@@ -56,6 +56,7 @@ export interface Game {
   players: Map<number, Player>;
   currentPlayerId: number;
   turn: number;
+  nextUnitId: number;
 }
 
 // ============================================================================

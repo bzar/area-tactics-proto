@@ -254,10 +254,7 @@ export class GameProcessor {
       }
     }
 
-    const newId = (Math.max(
-      0,
-      ...Array.from(this.game.players.values()).flatMap((p) => Array.from(p.units.keys()))
-    ) + 1) as UnitId;
+    const newId = this.game.nextUnitId++ as UnitId;
     const newUnit: Unit = {
       id: newId,
       position: pos,

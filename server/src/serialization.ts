@@ -15,6 +15,7 @@ interface SerializedGame {
   players: [number, SerializedPlayer][];
   currentPlayerId: number;
   turn: number;
+  nextUnitId?: number;
 }
 
 interface PersistedState {
@@ -42,6 +43,7 @@ export function serializeState(game: Game, turnStartPositions: Map<UnitId, Posit
       ]),
       currentPlayerId: game.currentPlayerId,
       turn: game.turn,
+      nextUnitId: game.nextUnitId,
     },
     turnStartPositions: Array.from(turnStartPositions.entries()).map(([id, pos]) => [
       id as number,
@@ -75,11 +77,16 @@ export function deserializeState(json: string): {
     ])
   );
 
+  const nextUnitId =
+    s.nextUnitId ??
+    Math.max(0, ...Array.from(players.values()).flatMap((p) => Array.from(p.units.keys()))) + 1;
+
   const game: Game = {
     map: gameMap,
     players,
     currentPlayerId: s.currentPlayerId,
     turn: s.turn,
+    nextUnitId,
   };
 
   const turnStartPositions = new Map<UnitId, Position>(

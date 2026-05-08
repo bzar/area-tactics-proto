@@ -63,6 +63,7 @@ function createTestGame(): Game {
     players,
     currentPlayerId: 1,
     turn: 1,
+    nextUnitId: 10,
   };
 }
 
@@ -146,6 +147,7 @@ describe("GameProcessor", () => {
       players,
       currentPlayerId: 1,
       turn: 1,
+      nextUnitId: 10,
     };
     const processor = new GameProcessor(game, createTestUnitTypes());
     const emit: GameEmitter = () => {};
@@ -239,6 +241,7 @@ describe("GameProcessor Attack (start-of-turn damage)", () => {
         players,
         currentPlayerId: 1,
         turn: 1,
+        nextUnitId: 10,
       },
       units1,
       units2,
@@ -339,6 +342,7 @@ describe("GameProcessor Energy Regeneration (start-of-turn)", () => {
         players,
         currentPlayerId: 1,
         turn: 1,
+        nextUnitId: 10,
       },
       p2Unit,
     };
@@ -390,6 +394,7 @@ describe("GameProcessor Energy Regeneration (start-of-turn)", () => {
       players,
       currentPlayerId: 1,
       turn: 1,
+      nextUnitId: 10,
     };
     const processor = new GameProcessor(game, createTestUnitTypes());
 
@@ -442,6 +447,7 @@ describe("GameProcessor Move Validation", () => {
       players,
       currentPlayerId: 1,
       turn: 1,
+      nextUnitId: 10,
     };
     const processor = new GameProcessor(game, createTestUnitTypes());
 
@@ -482,6 +488,7 @@ describe("GameProcessor Move Validation", () => {
       players,
       currentPlayerId: 1,
       turn: 1,
+      nextUnitId: 10,
     };
     const processor = new GameProcessor(game, createTestUnitTypes());
 
@@ -523,6 +530,7 @@ describe("GameProcessor Move Validation", () => {
       players,
       currentPlayerId: 1,
       turn: 1,
+      nextUnitId: 10,
     };
     const processor = new GameProcessor(game, createTestUnitTypes());
 
@@ -553,6 +561,7 @@ describe("GameProcessor Move Validation", () => {
       players,
       currentPlayerId: 1,
       turn: 1,
+      nextUnitId: 10,
     };
     const processor = new GameProcessor(game, createTestUnitTypes());
 
@@ -588,6 +597,7 @@ describe("GameProcessor Move Validation", () => {
       players,
       currentPlayerId: 1,
       turn: 1,
+      nextUnitId: 10,
     };
     const processor = new GameProcessor(game, createTestUnitTypes());
     const emit: GameEmitter = () => {};
@@ -640,6 +650,7 @@ describe("GameProcessor Unit Destruction", () => {
       players,
       currentPlayerId: 1,
       turn: 1,
+      nextUnitId: 10,
     };
     const processor = new GameProcessor(game, createTestUnitTypes());
     const emitted: any[] = [];
@@ -688,6 +699,7 @@ describe("GameProcessor Game Over", () => {
       players,
       currentPlayerId: 1,
       turn: 1,
+      nextUnitId: 10,
     };
     const processor = new GameProcessor(game, createTestUnitTypes());
     const emitted: any[] = [];
@@ -746,6 +758,7 @@ describe("GameProcessor Movement range", () => {
       players,
       currentPlayerId: 1,
       turn: 1,
+      nextUnitId: 10,
     };
     return { game, p1Unit };
   }
@@ -860,6 +873,7 @@ describe("GameProcessor Support feature", () => {
       players,
       currentPlayerId: 1,
       turn: 1,
+      nextUnitId: 10,
     };
     return { game, p1Infantry };
   }
@@ -936,6 +950,7 @@ describe("GameProcessor Support feature", () => {
       players,
       currentPlayerId: 1,
       turn: 1,
+      nextUnitId: 10,
     };
     const processor = new GameProcessor(game, createSupportUnitTypes(), { support: true });
 
@@ -977,6 +992,7 @@ describe("GameProcessor Support feature", () => {
       players,
       currentPlayerId: 1,
       turn: 1,
+      nextUnitId: 10,
     };
     const processor = new GameProcessor(game, createSupportUnitTypes(), { support: true });
     const emitted: any[] = [];
@@ -1036,6 +1052,7 @@ describe("GameProcessor Support feature", () => {
       players,
       currentPlayerId: 1,
       turn: 1,
+      nextUnitId: 10,
     };
     const processor = new GameProcessor(game, createSupportUnitTypes(), { support: true });
 
@@ -1106,6 +1123,7 @@ describe("GameProcessor Flanking feature", () => {
       players,
       currentPlayerId: 2,
       turn: 1,
+      nextUnitId: 10,
     };
     return { game, pO };
   }
@@ -1185,6 +1203,7 @@ describe("GameProcessor Flanking feature", () => {
       players,
       currentPlayerId: 2,
       turn: 1,
+      nextUnitId: 10,
     };
     const processor = new GameProcessor(game, createFlankingUnitTypes(), {
       support: false,
@@ -1270,6 +1289,7 @@ describe("GameProcessor Flanking feature", () => {
       players,
       currentPlayerId: 2,
       turn: 1,
+      nextUnitId: 10,
     };
     const processor = new GameProcessor(game, createFlankingUnitTypes(), {
       support: false,
@@ -1365,7 +1385,7 @@ describe("GameProcessor Claiming", () => {
       }
     }
 
-    const game: Game = { map: { grid, tiles, bases }, players, currentPlayerId: 1, turn: 1 };
+    const game: Game = { map: { grid, tiles, bases }, players, currentPlayerId: 1, turn: 1, nextUnitId: 10 };
     return new GameProcessor(game, types);
   }
 
@@ -1490,7 +1510,7 @@ describe("GameProcessor Claiming", () => {
       baseForPlayerId: 2,
     });
     bases.set(2, [createPosition(9, 0)]);
-    const game: Game = { map: { grid, tiles, bases }, players, currentPlayerId: 1, turn: 1 };
+    const game: Game = { map: { grid, tiles, bases }, players, currentPlayerId: 1, turn: 1, nextUnitId: 10 };
     const proc = new GameProcessor(game, types);
     const claims = proc.getClaims();
 
@@ -1541,7 +1561,7 @@ describe("GameProcessor Claiming", () => {
       baseForPlayerId: 2,
     });
     bases.set(2, [createPosition(7, 0)]);
-    const game: Game = { map: { grid, tiles, bases }, players, currentPlayerId: 1, turn: 1 };
+    const game: Game = { map: { grid, tiles, bases }, players, currentPlayerId: 1, turn: 1, nextUnitId: 10 };
     const proc = new GameProcessor(game, createTestUnitTypes());
     const claims = proc.getClaims();
 
@@ -1610,7 +1630,7 @@ describe("GameProcessor Claiming", () => {
       baseForPlayerId: 2,
     });
     bases.set(2, [createPosition(7, 0)]);
-    const game: Game = { map: { grid, tiles, bases }, players, currentPlayerId: 1, turn: 1 };
+    const game: Game = { map: { grid, tiles, bases }, players, currentPlayerId: 1, turn: 1, nextUnitId: 10 };
     const proc = new GameProcessor(game, createTestUnitTypes());
     const claims = proc.getClaims();
 
@@ -1655,7 +1675,7 @@ describe("GameProcessor Claiming", () => {
       baseForPlayerId: 2,
     });
     bases.set(2, [createPosition(9, 0)]);
-    const game: Game = { map: { grid, tiles, bases }, players, currentPlayerId: 1, turn: 1 };
+    const game: Game = { map: { grid, tiles, bases }, players, currentPlayerId: 1, turn: 1, nextUnitId: 10 };
     const proc = new GameProcessor(game, createTestUnitTypes());
     const claims = proc.getClaims();
 
@@ -1707,6 +1727,7 @@ describe("GameProcessor unit load and capacity", () => {
       players,
       currentPlayerId: 1,
       turn: 1,
+      nextUnitId: 10,
     };
     const proc = new GameProcessor(game, types);
 
@@ -1736,6 +1757,7 @@ describe("GameProcessor unit load and capacity", () => {
       players,
       currentPlayerId: 1,
       turn: 1,
+      nextUnitId: 10,
     };
     const proc = new GameProcessor(game, createTestUnitTypes());
     expect(proc.getUnitCapacity(1)).toBe(10);
@@ -1790,6 +1812,7 @@ describe("GameProcessor unit capacity from depots", () => {
       players,
       currentPlayerId: 1,
       turn: 1,
+      nextUnitId: 10,
     };
     return new GameProcessor(game, types);
   }
@@ -1862,6 +1885,7 @@ describe("GameProcessor unit capacity from depots", () => {
       players,
       currentPlayerId: 1,
       turn: 1,
+      nextUnitId: 10,
     };
     const proc = new GameProcessor(game, types);
 
@@ -1915,6 +1939,7 @@ describe("GameProcessor building units", () => {
       players,
       currentPlayerId: 1,
       turn: 1,
+      nextUnitId: 10,
     };
     return { game, proc: new GameProcessor(game, types) };
   }
@@ -2018,6 +2043,7 @@ describe("GameProcessor building units", () => {
       players,
       currentPlayerId: 1,
       turn: 1,
+      nextUnitId: 10,
     };
     const proc = new GameProcessor(game, types);
     const result = proc.handle(
@@ -2167,6 +2193,7 @@ describe("GameProcessor building units", () => {
       players,
       currentPlayerId: 1,
       turn: 1,
+      nextUnitId: 10,
     };
     const proc = new GameProcessor(game, types);
 
@@ -2194,6 +2221,42 @@ describe("GameProcessor building units", () => {
     expect(cancelEvt).toBeDefined();
     const p1Units = Array.from(game.players.get(1)!.units.values());
     expect(p1Units.every((u) => !u.underConstruction)).toBe(true);
+  });
+
+  it("should not reuse unit IDs after a unit is removed", () => {
+    const { game, proc } = makeBuildGame();
+
+    // Build a unit (gets nextUnitId, then increments).
+    proc.handle(
+      { type: "OrderBuild", facilityPosition: createPosition(5, 0), unitTypeId: "infantry" },
+      () => {}
+    );
+
+    // Complete construction by cycling turns.
+    proc.handle({ type: "EndTurn" }, () => {}); // P2's turn
+    proc.handle({ type: "EndTurn" }, () => {}); // back to P1, unit built
+
+    // Collect the built unit's ID.
+    const builtUnit = Array.from(game.players.get(1)!.units.values()).find(
+      (u) => positionKey(u.position) === "5,0"
+    )!;
+    expect(builtUnit).toBeDefined();
+    const firstBuiltId = builtUnit.id;
+
+    // Cancel a new build order (order then cancel to manipulate state without destroying the first unit).
+    // Instead, delete the built unit directly to simulate unit removal.
+    game.players.get(1)!.units.delete(builtUnit.id);
+
+    // Order another build; the new ID must not equal the removed unit's ID.
+    proc.handle(
+      { type: "OrderBuild", facilityPosition: createPosition(5, 0), unitTypeId: "infantry" },
+      () => {}
+    );
+    const secondBuildUnit = Array.from(game.players.get(1)!.units.values()).find(
+      (u) => u.underConstruction
+    )!;
+    expect(secondBuildUnit).toBeDefined();
+    expect(secondBuildUnit.id).not.toBe(firstBuiltId);
   });
 });
 
@@ -2224,6 +2287,7 @@ describe("GameProcessor Base Capture", () => {
       players,
       currentPlayerId: 1,
       turn: 1,
+      nextUnitId: 10,
     };
     const proc = new GameProcessor(game, createTestUnitTypes());
 
@@ -2252,6 +2316,7 @@ describe("GameProcessor Base Capture", () => {
       players,
       currentPlayerId: 1,
       turn: 1,
+      nextUnitId: 10,
     };
     const proc = new GameProcessor(game, createTestUnitTypes());
 
@@ -2287,6 +2352,7 @@ describe("GameProcessor Base Capture", () => {
       players,
       currentPlayerId: 1,
       turn: 1,
+      nextUnitId: 10,
     };
     const proc = new GameProcessor(game, createTestUnitTypes());
 
@@ -2314,6 +2380,7 @@ describe("GameProcessor Base Capture", () => {
       players,
       currentPlayerId: 1,
       turn: 1,
+      nextUnitId: 10,
     };
     const proc = new GameProcessor(game, createTestUnitTypes());
 
@@ -2359,6 +2426,7 @@ function makeApplyEventGame(): { game: Game; unitTypes: Map<string, UnitType> } 
     ]),
     currentPlayerId: 1,
     turn: 1,
+    nextUnitId: 10,
   };
   return { game, unitTypes };
 }
