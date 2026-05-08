@@ -504,6 +504,62 @@ describe("GameProcessor Move Validation", () => {
     expect(result.ok).toBe(false);
   });
 
+  it("should reject moving a unit that is under construction", () => {
+    const grid = HexGrid.rect(10, 1);
+    const unit: Unit = {
+      id: createUnitId(1),
+      position: createPosition(0, 0),
+      typeId: "infantry",
+      playerId: 1,
+      energy: 10,
+      condition: 10,
+      underConstruction: true,
+    };
+    const players = new Map([
+      [1, { id: 1, type: PlayerType.Human, units: new Map([[unit.id, unit]]) }],
+    ]);
+    const game: Game = {
+      map: { grid, tiles: new Map(), bases: new Map() },
+      players,
+      currentPlayerId: 1,
+      turn: 1,
+    };
+    const processor = new GameProcessor(game, createTestUnitTypes());
+
+    const result = processor.handle(
+      { type: "Move", unitId: createUnitId(1), position: createPosition(1, 0) },
+      () => {}
+    );
+    expect(result.ok).toBe(false);
+    expect(unit.position).toEqual(createPosition(0, 0));
+  });
+
+  it("should return no valid move positions for a unit under construction", () => {
+    const grid = HexGrid.rect(10, 1);
+    const unit: Unit = {
+      id: createUnitId(1),
+      position: createPosition(5, 0),
+      typeId: "infantry",
+      playerId: 1,
+      energy: 10,
+      condition: 10,
+      underConstruction: true,
+    };
+    const players = new Map([
+      [1, { id: 1, type: PlayerType.Human, units: new Map([[unit.id, unit]]) }],
+    ]);
+    const game: Game = {
+      map: { grid, tiles: new Map(), bases: new Map() },
+      players,
+      currentPlayerId: 1,
+      turn: 1,
+    };
+    const processor = new GameProcessor(game, createTestUnitTypes());
+
+    const validPositions = processor.getValidMovePositions(createUnitId(1));
+    expect(validPositions).toHaveLength(0);
+  });
+
   it("should reset movement range at the start of a new turn", () => {
     // P1 moves infantry to its max range (3,0), ends turn twice, then moves again from (3,0)
     const grid = HexGrid.rect(10, 1);
