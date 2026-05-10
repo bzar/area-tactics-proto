@@ -310,6 +310,47 @@ describe("GameProcessor Attack (start-of-turn damage)", () => {
     expect(units1.get(createUnitId(1))!.energy).toBe(8);
     expect(units1.get(createUnitId(3))!.energy).toBe(8);
   });
+
+  it("should not attack a unit under construction", () => {
+    // P2 infantry at (2,0) influences P1 underConstruction unit at (0,0)
+    const { game, units1 } = makeGame([{ id: 1, q: 0, r: 0 }], [{ id: 2, q: 2, r: 0 }]);
+    units1.get(createUnitId(1))!.underConstruction = true;
+    const processor = new GameProcessor(game, createTestUnitTypes());
+    const emitted: any[] = [];
+
+    processor.handle({ type: "EndTurn" }, (e) => emitted.push(e)); // → P2's turn; P2 attacks P1
+
+    const damaged = emitted.find((e) => e.type === "UnitDamaged");
+    expect(damaged).toBeUndefined();
+    expect(units1.get(createUnitId(1))!.energy).toBe(10);
+    expect(units1.get(createUnitId(1))!.condition).toBe(10);
+  });
+
+  it("should not count a unit under construction when determining split damage", () => {
+    // P2 infantry at (2,0); P1 has a normal unit at (0,0) and an underConstruction unit at (1,0)
+    // The underConstruction unit should not count as a target, so P2 attacks (0,0) with normal power
+    const { game, units1 } = makeGame(
+      [
+        { id: 1, q: 0, r: 0 },
+        { id: 3, q: 1, r: 0 },
+      ],
+      [{ id: 2, q: 2, r: 0 }]
+    );
+    units1.get(createUnitId(3))!.underConstruction = true;
+    const processor = new GameProcessor(game, createTestUnitTypes());
+    const emitted: any[] = [];
+
+    processor.handle({ type: "EndTurn" }, (e) => emitted.push(e));
+
+    const damagedEvents = emitted.filter((e) => e.type === "UnitDamaged");
+    // Only the non-underConstruction unit (id=1) should be damaged, at normal (not split) power
+    expect(damagedEvents.length).toBe(1);
+    expect(damagedEvents[0].unit.unitId).toBe(createUnitId(1));
+    expect(damagedEvents[0].damageType).toBe(DamageType.Normal);
+    expect(damagedEvents[0].damageToEnergy).toBe(4);
+    expect(units1.get(createUnitId(1))!.energy).toBe(6);
+    expect(units1.get(createUnitId(3))!.energy).toBe(10); // under construction, not attacked
+  });
 });
 
 describe("GameProcessor Energy Regeneration (start-of-turn)", () => {

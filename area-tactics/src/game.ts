@@ -446,7 +446,7 @@ export class GameProcessor {
         if (player.id === activePlayerId) return;
         influencedIds.forEach((id) => {
           const unit = player.units.get(id);
-          if (unit) targets.push(unit);
+          if (unit && !unit.underConstruction) targets.push(unit);
         });
       });
 
