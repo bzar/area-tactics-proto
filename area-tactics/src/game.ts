@@ -68,7 +68,11 @@ export class GameProcessor {
   private recalculateInfluences(): void {
     this.influences.clear();
     const allUnits: Unit[] = [];
-    this.game.players.forEach((player) => player.units.forEach((unit) => allUnits.push(unit)));
+    this.game.players.forEach((player) =>
+      player.units.forEach((unit) => {
+        if (!unit.underConstruction) allUnits.push(unit);
+      })
+    );
 
     for (const influencer of allUnits) {
       const unitType = this.unitTypes.get(influencer.typeId);
@@ -680,6 +684,7 @@ export class GameProcessor {
       const directInfluencedTiles = new Set<string>();
       const nonSupportInfluencedTiles = new Set<string>();
       player.units.forEach((unit) => {
+        if (unit.underConstruction) return;
         const ut = this.unitTypes.get(unit.typeId);
         if (!ut) return;
         this.game.map.grid.tilesInRange(unit.position, ut.aoiMin, ut.aoiMax).forEach((pos) => {

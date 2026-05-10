@@ -226,6 +226,7 @@ function buildTileInfluence(): {
   const byUnit = new Map<string, Set<UnitId>>();
   game.players.forEach((player) => {
     player.units.forEach((unit) => {
+      if (unit.underConstruction) return;
       const ut = unitTypes.get(unit.typeId);
       if (!ut) return;
       for (const tile of game.map.grid.tilesInRange(unit.position, ut.aoiMin, ut.aoiMax)) {
