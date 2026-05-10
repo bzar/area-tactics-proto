@@ -1,0 +1,175 @@
+{
+  "meta": {
+    "name": "spiral2",
+    "label": "Spiral 2 (20×18)"
+  },
+  "data": {
+    "grid": {
+      "type": "rect",
+      "cols": 20,
+      "rows": 18
+    },
+    "unitCapacity": {
+      "1": 20,
+      "2": 20
+    },
+    "units": [
+      {
+        "typeId": "infantry",
+        "playerId": 1,
+        "q": 0,
+        "r": 0
+      },
+      {
+        "typeId": "infantry",
+        "playerId": 2,
+        "q": 19,
+        "r": 8
+      }
+    ],
+    "tiles": [
+      {
+        "q": 0,
+        "r": 0,
+        "features": [
+          "Base"
+        ],
+        "baseForPlayerId": 1
+      },
+      {
+        "q": 1,
+        "r": 1,
+        "features": [
+          "Facility"
+        ]
+      },
+      {
+        "q": 2,
+        "r": 3,
+        "features": [
+          "Depot"
+        ]
+      },
+      {
+        "q": 19,
+        "r": 8,
+        "features": [
+          "Base"
+        ],
+        "baseForPlayerId": 2
+      },
+      {
+        "q": 1,
+        "r": 16,
+        "features": [
+          "Facility"
+        ]
+      },
+      {
+        "q": 18,
+        "r": -8,
+        "features": [
+          "Facility"
+        ]
+      },
+      {
+        "q": 18,
+        "r": 7,
+        "features": [
+          "Facility"
+        ]
+      },
+      {
+        "q": 19,
+        "r": -2,
+        "features": [
+          "Facility"
+        ]
+      },
+      {
+        "q": 0,
+        "r": 10,
+        "features": [
+          "Facility"
+        ]
+      },
+      {
+        "q": 17,
+        "r": 5,
+        "features": [
+          "Depot"
+        ]
+      },
+      {
+        "q": 13,
+        "r": 7,
+        "features": [
+          "Depot"
+        ]
+      },
+      {
+        "q": 6,
+        "r": 1,
+        "features": [
+          "Depot"
+        ]
+      },
+      {
+        "q": 16,
+        "r": 1,
+        "features": [
+          "Depot"
+        ]
+      },
+      {
+        "q": 16,
+        "r": -2,
+        "features": [
+          "Depot"
+        ]
+      },
+      {
+        "q": 3,
+        "r": 10,
+        "features": [
+          "Depot"
+        ]
+      },
+      {
+        "q": 3,
+        "r": 7,
+        "features": [
+          "Depot"
+        ]
+      },
+      {
+        "q": 9,
+        "r": 11,
+        "features": [
+          "Depot"
+        ]
+      },
+      {
+        "q": 9,
+        "r": 7,
+        "features": [
+          "Depot"
+        ]
+      },
+      {
+        "q": 10,
+        "r": 1,
+        "features": [
+          "Depot"
+        ]
+      },
+      {
+        "q": 10,
+        "r": -3,
+        "features": [
+          "Depot"
+        ]
+      }
+    ]
+  }
+}
