@@ -177,6 +177,17 @@ describe("GameProcessor", () => {
     expect(unitA.position).toEqual(createPosition(2, 0));
     expect(unitB.position).toEqual(createPosition(0, 0));
   });
+
+  it("should exclude units under construction from influences", () => {
+    const game = createTestGame();
+    game.players.get(2)!.units.get(createUnitId(2))!.underConstruction = true;
+    const processor = new GameProcessor(game, createTestUnitTypes());
+
+    const influencedByP1 = processor.getInfluences().getUnitsInfluencedBy(createUnitId(1));
+    const influencingP1 = processor.getInfluences().getUnitsInfluencing(createUnitId(1));
+    expect(influencedByP1.has(createUnitId(2))).toBe(false);
+    expect(influencingP1.has(createUnitId(2))).toBe(false);
+  });
 });
 
 describe("GameProcessor EndTurn", () => {
@@ -1455,6 +1466,16 @@ describe("GameProcessor Claiming", () => {
     const claims = proc.getClaims();
 
     expect(claimOf(claims, 1, 0, 1)).toBeDefined();
+  });
+
+  it("unit under construction does not contribute to claims", () => {
+    const proc = makeClaimGame([{ id: 1, q: 0 }], [{ id: 2, q: 9 }]);
+    const p1Unit = proc.getGame().players.get(1)!.units.get(createUnitId(1))!;
+    p1Unit.underConstruction = true;
+    const claims = proc.getClaims();
+
+    expect(claimOf(claims, 0, 0, 1)).toBeDefined();
+    expect(claimOf(claims, 1, 0, 1)).toBeUndefined();
   });
 
   it("influenced tile not adjacent to any claimed tile is not claimed", () => {
