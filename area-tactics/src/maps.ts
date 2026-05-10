@@ -19,6 +19,7 @@ import testMapJson from "../maps/test.json" with { type: "json" };
 import smallMapJson from "../maps/small.json" with { type: "json" };
 import twoBasesMapJson from "../maps/two-bases.json" with { type: "json" };
 import spiralMapJson from "../maps/spiral.json" with { type: "json" };
+import spiral2MapJson from "../maps/spiral2.json" with { type: "json" };
 
 // ============================================================================
 // JSON map format
@@ -212,6 +213,7 @@ const ALL_MAPS: Record<string, MapDefinition> = {
   small: parseMapJson(smallMapJson as MapJson),
   "two-bases": parseMapJson(twoBasesMapJson as MapJson),
   spiral: parseMapJson(spiralMapJson as MapJson),
+  spiral2: parseMapJson(spiral2MapJson as MapJson),
 };
 
 // ============================================================================
