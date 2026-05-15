@@ -177,13 +177,17 @@
       text-align: left; width: 100%; white-space: pre;
     }
     .build-footer {
-      padding: 12px 16px; display: flex; justify-content: flex-end;
+      padding: 12px 16px; display: flex; justify-content: flex-end; gap: 10px;
       border-top: 1px solid var(--border);
     }
     .build-btn {
       padding: 9px 28px; font: bold 14px sans-serif;
       background: var(--bg-panel); color: var(--text-hi); border: 1px solid var(--accent);
       border-radius: 5px; cursor: pointer;
+    }
+    .build-btn.secondary {
+      border-color: var(--border); color: var(--text);
+      background: rgba(255,255,255,0.06);
     }
     .build-btn:hover:not(:disabled) { background: var(--bg-raise); }
     .build-btn:disabled { opacity: 0.35; cursor: not-allowed; }
@@ -262,6 +266,7 @@
         </div>
       </div>
       <div class="build-footer">
+        <button class="build-btn secondary" id="build-cancel-btn" hidden>Cancel Order</button>
         <button class="build-btn" id="build-confirm-btn" disabled>Build</button>
       </div>
     </div>
