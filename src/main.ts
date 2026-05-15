@@ -559,6 +559,7 @@ function updateUnitInfo() {
 
 let buildDialogPos: { q: number; r: number } | null = null;
 let buildDialogSelectedType: string | null = null;
+let buildDialogHasExistingOrder = false;
 
 function isBuildableFacility(pos: { q: number; r: number }): boolean {
   if (!isMyTurn()) return false;
@@ -587,6 +588,7 @@ function openBuildDialog(pos: { q: number; r: number }) {
   const existingOrder = Array.from(game.players.get(game.currentPlayerId)!.units.values()).find(
     (u) => u.underConstruction && positionKey(u.position) === key
   );
+  buildDialogHasExistingOrder = !!existingOrder;
   const slotsInUse = load - (existingOrder ? (unitTypes.get(existingOrder.typeId)?.cost ?? 0) : 0);
 
   const listEl = document.getElementById("build-list")!;
@@ -609,7 +611,9 @@ function openBuildDialog(pos: { q: number; r: number }) {
   }
 
   const confirmBtn = document.getElementById("build-confirm-btn") as HTMLButtonElement;
+  const cancelBtn = document.getElementById("build-cancel-btn") as HTMLButtonElement;
   confirmBtn.disabled = true;
+  cancelBtn.hidden = !existingOrder;
 
   const preselect = existingOrder?.typeId ?? firstAvailableId;
   if (
@@ -671,6 +675,7 @@ function selectBuildType(typeId: string) {
 function closeBuildDialog() {
   buildDialogPos = null;
   buildDialogSelectedType = null;
+  buildDialogHasExistingOrder = false;
   document.getElementById("build-dialog")!.classList.remove("visible");
 }
 
@@ -688,6 +693,23 @@ document.getElementById("build-confirm-btn")!.addEventListener("click", () => {
     onlineClient.sendAction(action);
   } else {
     gameProcessor.handle(action, (e) => { logGameEvent(e); });
+    updateHUD();
+    render();
+  }
+  closeBuildDialog();
+});
+document.getElementById("build-cancel-btn")!.addEventListener("click", () => {
+  if (!buildDialogPos || !buildDialogHasExistingOrder) return;
+  const action: ActionEvent = {
+    type: "CancelBuild",
+    facilityPosition: createPosition(buildDialogPos.q, buildDialogPos.r),
+  };
+  if (onlineClient) {
+    onlineClient.sendAction(action);
+  } else {
+    gameProcessor.handle(action, (e) => {
+      logGameEvent(e);
+    });
     updateHUD();
     render();
   }
