@@ -197,6 +197,7 @@ export class GameProcessor {
       emit(e);
     };
     this.resolveConstructionForPlayer(nextPlayerId, trackingEmit);
+    this.recalculateInfluences();
     this.applyStartOfTurnDamage(nextPlayerId, trackingEmit);
     this.applyStartOfTurnRegen(nextPlayerId, trackingEmit);
     if (!gameEnded) this.checkBaseCapture(trackingEmit);

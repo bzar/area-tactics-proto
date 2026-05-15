@@ -2201,6 +2201,36 @@ describe("GameProcessor building units", () => {
     expect(constructed).toBeDefined();
   });
 
+  it("should let a freshly built unit attack on its first turn", () => {
+    const { game, proc } = makeBuildGame();
+    const p2Inf: Unit = {
+      id: createUnitId(2),
+      position: createPosition(7, 0),
+      typeId: "infantry",
+      playerId: 2,
+      energy: 10,
+      condition: 10,
+    };
+    game.players.get(2)!.units.set(p2Inf.id, p2Inf);
+
+    proc.handle(
+      { type: "OrderBuild", facilityPosition: createPosition(5, 0), unitTypeId: "infantry" },
+      () => {}
+    );
+
+    proc.handle({ type: "EndTurn" }, () => {}); // P2's turn
+    const events: any[] = [];
+    proc.handle({ type: "EndTurn" }, (e) => events.push(e)); // back to P1
+
+    const builtUnit = game.players.get(1)!.units.get(createUnitId(10))!;
+    const damageEvent = events.find((e) => e.type === "UnitDamaged");
+    expect(events.find((e) => e.type === "UnitBuilt")).toBeDefined();
+    expect(damageEvent).toBeDefined();
+    expect(damageEvent.attacker.unitId).toBe(builtUnit.id);
+    expect(damageEvent.unit.unitId).toBe(p2Inf.id);
+    expect(p2Inf.energy).toBe(6);
+  });
+
   it("should cancel construction if the facility is no longer uniquely claimed at start of builder's turn", () => {
     // Set up: P1 orders build, then P2 takes the facility away.
     const grid = HexGrid.rect(10, 1);
