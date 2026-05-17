@@ -1463,7 +1463,7 @@ describe("GameProcessor forecasting", () => {
     expect(forecasts.map((forecast) => forecast.damageToEnergy)).toEqual([2, 2]);
   });
 
-  it("previews only damage that lands before a unit owner's next turn", () => {
+  it("previews damage through the current player's next turn", () => {
     const game = createForecastGame(
       [
         {
@@ -1500,6 +1500,35 @@ describe("GameProcessor forecasting", () => {
       destroysTarget: false,
     });
     expect(previews.get(createUnitId(2))).toEqual({
+      damageToEnergy: 4,
+      damageToCondition: 0,
+      destroysTarget: false,
+    });
+  });
+
+  it("does not report negative damage when a unit regains energy before the horizon ends", () => {
+    const game = createForecastGame(
+      [
+        {
+          id: createUnitId(1),
+          position: createPosition(0, 0),
+          typeId: "infantry",
+          playerId: 1,
+          energy: 8,
+          condition: 10,
+        },
+      ],
+      [],
+      1
+    );
+
+    const processor = new GameProcessor(game, createForecastUnitTypes(), {
+      support: false,
+      flanking: false,
+    });
+    const previews = processor.getUnitDamagePreviews();
+
+    expect(previews.get(createUnitId(1))).toEqual({
       damageToEnergy: 0,
       damageToCondition: 0,
       destroysTarget: false,

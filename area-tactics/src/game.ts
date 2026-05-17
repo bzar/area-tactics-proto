@@ -772,11 +772,15 @@ export class GameProcessor {
 
     const sim = new GameProcessor(cloneGame(this.game), this.unitTypes, this.features);
     const previews = new Map<UnitId, UnitDamagePreview>();
+    const originalCurrentPlayerId = sim.game.currentPlayerId;
+    const noopEmit: GameEmitter = () => {};
 
-    for (const activePlayerId of upcomingPlayerOrder(sim.game)) {
-      if (activePlayerId === sim.game.currentPlayerId) break;
-      sim.buildAttackForecastsForPlayer(activePlayerId);
-    }
+    do {
+      sim.handle({ type: "EndTurn" }, noopEmit);
+    } while (
+      sim.game.currentPlayerId !== originalCurrentPlayerId &&
+      !sim.game.players.get(originalCurrentPlayerId)?.eliminated
+    );
 
     initialStats.forEach(({ energy, condition }, unitId) => {
       let finalUnit: Unit | undefined;
@@ -787,8 +791,8 @@ export class GameProcessor {
       const finalEnergy = finalUnit?.energy ?? 0;
       const finalCondition = finalUnit?.condition ?? 0;
       previews.set(unitId, {
-        damageToEnergy: energy - finalEnergy,
-        damageToCondition: condition - finalCondition,
+        damageToEnergy: Math.max(0, energy - finalEnergy),
+        damageToCondition: Math.max(0, condition - finalCondition),
         destroysTarget: !finalUnit || finalCondition <= 0,
       });
     });
