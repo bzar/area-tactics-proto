@@ -1,7 +1,7 @@
 import * as PIXI from "pixi.js";
 import { colors, palette } from './palette.js';
 import { loadMap, listMaps, defaultUnitTypes, createGameFromMap } from "area-tactics";
-import { GameProcessor, GameFeatures } from "area-tactics";
+import { AttackForecast, GameProcessor, GameFeatures } from "area-tactics";
 import { InputProcessor } from "./input";
 import { ActionEvent, GameEvent, UnitRef } from "area-tactics";
 import {
@@ -242,7 +242,11 @@ function buildTileInfluence(): {
 }
 
 // Draws support lines (cyan: convoy → supported friendly units).
-function drawRelations() {
+function attackForecastKey(attackerId: UnitId, targetId: UnitId): string {
+  return `${attackerId}->${targetId}`;
+}
+
+function drawRelations(attackForecasts: Map<string, AttackForecast>, hoveredUnitId: UnitId | null) {
   relationsGfx.clear();
 
   game.players.forEach((player) => {
@@ -355,6 +359,21 @@ function drawRelations() {
         relationsGfx.lineStyle(2, attackColor, 0.75);
         relationsGfx.moveTo(ax + ox, ay + oy);
         relationsGfx.lineTo(bx + ox, by + oy);
+
+        if (hoveredUnitId === attacker.id || hoveredUnitId === target.id) {
+          const forecast = attackForecasts.get(attackForecastKey(attacker.id, target.id));
+          if (forecast) {
+            const label = getLabel(String(forecast.power), Math.max(12, Math.floor(HEX_SIZE * 0.32)));
+            const style = label.style as PIXI.TextStyle;
+            style.fill = 0xffffff;
+            style.stroke = attackColor;
+            style.strokeThickness = 4;
+            label.x = (ax + bx) / 2 + ox * 3.5;
+            label.y = (ay + by) / 2 + oy * 3.5;
+            label.alpha = 0.95;
+            labelLayer.addChild(label);
+          }
+        }
       });
     });
   });
@@ -372,9 +391,24 @@ function render() {
   const { byPlayer, byUnit } = buildTileInfluence();
   const claims = gameProcessor.getClaims();
   const hoveredKey = hoveredPos ? positionKey(hoveredPos) : null;
+  const attackForecasts = new Map(
+    gameProcessor.getAttackForecasts().map((forecast) => [
+      attackForecastKey(forecast.attackerId, forecast.targetId),
+      forecast,
+    ])
+  );
+  const damagePreview = gameProcessor.getUnitDamagePreviews();
+  let hoveredUnitId: UnitId | null = null;
   const hoveredInfluencers: Set<UnitId> = hoveredKey
     ? (byUnit.get(hoveredKey) ?? new Set())
     : new Set();
+  if (hoveredKey) {
+    game.players.forEach((player) => {
+      player.units.forEach((unit) => {
+        if (!hoveredUnitId && positionKey(unit.position) === hoveredKey) hoveredUnitId = unit.id;
+      });
+    });
+  }
 
   for (const { q, r } of grid.getTiles()) {
     const [cx, cy] = hexCenter(q, r, HEX_SIZE);
@@ -468,6 +502,49 @@ function render() {
       unitGfx.drawRect(barX, barY, barW * (unit.condition / ut.maxCondition), conditionBarH);
       unitGfx.endFill();
 
+      const preview = damagePreview.get(unit.id);
+      if (preview) {
+        const energyPreviewH = Math.max(2, Math.ceil(energyBarH / 2));
+        const conditionPreviewH = Math.max(2, Math.ceil(conditionBarH / 2));
+        const energyPreviewW = barW * (preview.damageToEnergy / ut.maxEnergy);
+        const conditionPreviewW = barW * (preview.damageToCondition / ut.maxCondition);
+        const energyRemainingW = barW * ((unit.energy - preview.damageToEnergy) / ut.maxEnergy);
+        const conditionRemainingW = barW * ((unit.condition - preview.damageToCondition) / ut.maxCondition);
+
+        if (energyPreviewW > 0) {
+          unitGfx.beginFill(cssHex(colors.red), 0.9 * alpha);
+          unitGfx.drawRect(
+            barX + energyRemainingW,
+            barY - energyBarH - 1 + (energyBarH - energyPreviewH),
+            energyPreviewW,
+            energyPreviewH
+          );
+          unitGfx.endFill();
+        }
+
+        if (conditionPreviewW > 0) {
+          unitGfx.beginFill(cssHex(colors.red), 0.9 * alpha);
+          unitGfx.drawRect(
+            barX + conditionRemainingW,
+            barY + (conditionBarH - conditionPreviewH),
+            conditionPreviewW,
+            conditionPreviewH
+          );
+          unitGfx.endFill();
+        }
+
+        if (preview.destroysTarget) {
+          const topY = barY - energyBarH - 1;
+          const bottomY = barY + conditionBarH;
+          unitGfx.lineStyle(2, cssHex(colors.red), 0.95 * alpha);
+          unitGfx.moveTo(barX, topY);
+          unitGfx.lineTo(barX + barW, bottomY);
+          unitGfx.moveTo(barX + barW, topY);
+          unitGfx.lineTo(barX, bottomY);
+          unitGfx.lineStyle(0);
+        }
+      }
+
       // Unit type label
       const lbl = getLabel(UNIT_LABEL[unit.typeId] ?? "?", Math.floor(HEX_SIZE * 0.5));
       lbl.x = cx;
@@ -491,7 +568,7 @@ function render() {
     }
   }
 
-  drawRelations();
+  drawRelations(attackForecasts, hoveredUnitId);
 }
 
 function updateHUD() {

@@ -1366,6 +1366,240 @@ describe("GameProcessor Flanking feature", () => {
   });
 });
 
+describe("GameProcessor forecasting", () => {
+  function createForecastGame(p1Units: Unit[], p2Units: Unit[], currentPlayerId = 1): Game {
+    return {
+      map: { grid: HexGrid.rect(5, 1), tiles: new Map(), bases: new Map() },
+      players: new Map([
+        [1, { id: 1, type: PlayerType.Human, units: new Map(p1Units.map((u) => [u.id, u])) }],
+        [2, { id: 2, type: PlayerType.Human, units: new Map(p2Units.map((u) => [u.id, u])) }],
+      ]),
+      currentPlayerId,
+      turn: 1,
+      nextUnitId: 10,
+    };
+  }
+
+  function createForecastUnitTypes(): Map<string, UnitType> {
+    const types = createTestUnitTypes();
+    types.set("scout", {
+      id: "scout",
+      effectType: EffectType.Direct,
+      power: 4,
+      aoiMin: 0,
+      aoiMax: 4,
+      maxEnergy: 10,
+      maxCondition: 6,
+      movement: 7,
+      cost: 2,
+    });
+    types.set("mortar", {
+      id: "mortar",
+      effectType: EffectType.Indirect,
+      power: 10,
+      aoiMin: 3,
+      aoiMax: 5,
+      maxEnergy: 4,
+      maxCondition: 5,
+      movement: 2,
+      cost: 2,
+    });
+    types.set("tank", {
+      id: "tank",
+      effectType: EffectType.Direct,
+      power: 8,
+      aoiMin: 0,
+      aoiMax: 3,
+      maxEnergy: 10,
+      maxCondition: 15,
+      movement: 5,
+      cost: 3,
+    });
+    return types;
+  }
+
+  it("forecasts attack labels using the same split-damage rules as combat", () => {
+    const game = createForecastGame(
+      [
+        {
+          id: createUnitId(1),
+          position: createPosition(0, 0),
+          typeId: "infantry",
+          playerId: 1,
+          energy: 10,
+          condition: 10,
+        },
+        {
+          id: createUnitId(2),
+          position: createPosition(1, 0),
+          typeId: "infantry",
+          playerId: 1,
+          energy: 10,
+          condition: 10,
+        },
+      ],
+      [
+        {
+          id: createUnitId(3),
+          position: createPosition(2, 0),
+          typeId: "infantry",
+          playerId: 2,
+          energy: 10,
+          condition: 10,
+        },
+      ]
+    );
+
+    const processor = new GameProcessor(game, createForecastUnitTypes(), {
+      support: false,
+      flanking: false,
+    });
+    const forecasts = processor
+      .getAttackForecasts()
+      .filter((forecast) => forecast.attackerId === createUnitId(3));
+
+    expect(forecasts).toHaveLength(2);
+    expect(forecasts.map((forecast) => forecast.power)).toEqual([2, 2]);
+    expect(forecasts.map((forecast) => forecast.damageToEnergy)).toEqual([2, 2]);
+  });
+
+  it("previews only damage that lands before a unit owner's next turn", () => {
+    const game = createForecastGame(
+      [
+        {
+          id: createUnitId(1),
+          position: createPosition(0, 0),
+          typeId: "infantry",
+          playerId: 1,
+          energy: 2,
+          condition: 10,
+        },
+      ],
+      [
+        {
+          id: createUnitId(2),
+          position: createPosition(2, 0),
+          typeId: "infantry",
+          playerId: 2,
+          energy: 10,
+          condition: 10,
+        },
+      ],
+      1
+    );
+
+    const processor = new GameProcessor(game, createForecastUnitTypes(), {
+      support: false,
+      flanking: false,
+    });
+    const previews = processor.getUnitDamagePreviews();
+
+    expect(previews.get(createUnitId(1))).toEqual({
+      damageToEnergy: 2,
+      damageToCondition: 2,
+      destroysTarget: false,
+    });
+    expect(previews.get(createUnitId(2))).toEqual({
+      damageToEnergy: 0,
+      damageToCondition: 0,
+      destroysTarget: false,
+    });
+  });
+
+  it("marks units that would be destroyed before their next turn", () => {
+    const game = createForecastGame(
+      [
+        {
+          id: createUnitId(1),
+          position: createPosition(0, 0),
+          typeId: "infantry",
+          playerId: 1,
+          energy: 0,
+          condition: 3,
+        },
+      ],
+      [
+        {
+          id: createUnitId(2),
+          position: createPosition(2, 0),
+          typeId: "infantry",
+          playerId: 2,
+          energy: 10,
+          condition: 10,
+        },
+      ],
+      1
+    );
+
+    const processor = new GameProcessor(game, createForecastUnitTypes(), {
+      support: false,
+      flanking: false,
+    });
+    const previews = processor.getUnitDamagePreviews();
+
+    expect(previews.get(createUnitId(1))).toEqual({
+      damageToEnergy: 0,
+      damageToCondition: 3,
+      destroysTarget: true,
+    });
+  });
+
+  it("forecasts flanking for the scout but not the mortar when the scout also influences the mortar", () => {
+    const grid = HexGrid.rect(6, 1);
+    const scout: Unit = {
+      id: createUnitId(1),
+      position: createPosition(0, 0),
+      typeId: "scout",
+      playerId: 1,
+      energy: 10,
+      condition: 6,
+    };
+    const mortar: Unit = {
+      id: createUnitId(2),
+      position: createPosition(1, 0),
+      typeId: "mortar",
+      playerId: 1,
+      energy: 4,
+      condition: 5,
+    };
+    const tank: Unit = {
+      id: createUnitId(3),
+      position: createPosition(4, 0),
+      typeId: "tank",
+      playerId: 2,
+      energy: 10,
+      condition: 15,
+    };
+    const game: Game = {
+      map: { grid, tiles: new Map(), bases: new Map() },
+      players: new Map([
+        [1, { id: 1, type: PlayerType.Human, units: new Map([[scout.id, scout], [mortar.id, mortar]]) }],
+        [2, { id: 2, type: PlayerType.Human, units: new Map([[tank.id, tank]]) }],
+      ]),
+      currentPlayerId: 2,
+      turn: 1,
+      nextUnitId: 10,
+    };
+
+    const processor = new GameProcessor(game, createForecastUnitTypes(), {
+      support: false,
+      flanking: true,
+    });
+    const forecasts = processor
+      .getAttackForecasts()
+      .filter((forecast) => forecast.targetId === tank.id)
+      .sort((a, b) => a.attackerId - b.attackerId);
+
+    expect(forecasts).toHaveLength(2);
+    expect(forecasts[0].attackerId).toBe(scout.id);
+    expect(forecasts[0].damageType).toBe(DamageType.Flanked);
+    expect(forecasts[0].power).toBe(6);
+    expect(forecasts[1].attackerId).toBe(mortar.id);
+    expect(forecasts[1].damageType).toBe(DamageType.Normal);
+    expect(forecasts[1].power).toBe(10);
+  });
+});
+
 describe("GameProcessor Claiming", () => {
   // Helper: build a minimal game with bases and a few units.
   // Grid: 10x1 row. P1 base at (0,0), P2 base at (9,0).
