@@ -1,7 +1,7 @@
 import * as PIXI from "pixi.js";
 import { colors, palette } from './palette.js';
 import { loadMap, listMaps, defaultUnitTypes, createGameFromMap } from "area-tactics";
-import { GameProcessor, GameFeatures } from "area-tactics";
+import { AttackForecast, GameProcessor, GameFeatures } from "area-tactics";
 import { InputProcessor } from "./input";
 import { ActionEvent, GameEvent, UnitRef } from "area-tactics";
 import {
@@ -31,7 +31,6 @@ import {
   drawTileFeatureMarkers,
   cssHex,
 } from "./render.js";
-import { AttackForecast, buildAttackForecasts, buildUnitDamagePreview } from "./damage-preview.js";
 
 // Scale hex size so the game is legible on smaller retina screens.
 // Reference: 28px at 1600px+ viewport width; inversely scales for narrower screens.
@@ -392,14 +391,13 @@ function render() {
   const { byPlayer, byUnit } = buildTileInfluence();
   const claims = gameProcessor.getClaims();
   const hoveredKey = hoveredPos ? positionKey(hoveredPos) : null;
-  const features = gameProcessor.getFeatures();
   const attackForecasts = new Map(
-    buildAttackForecasts(game, unitTypes, features).map((forecast) => [
+    gameProcessor.getAttackForecasts().map((forecast) => [
       attackForecastKey(forecast.attackerId, forecast.targetId),
       forecast,
     ])
   );
-  const damagePreview = buildUnitDamagePreview(game, unitTypes, features);
+  const damagePreview = gameProcessor.getUnitDamagePreviews();
   let hoveredUnitId: UnitId | null = null;
   const hoveredInfluencers: Set<UnitId> = hoveredKey
     ? (byUnit.get(hoveredKey) ?? new Set())

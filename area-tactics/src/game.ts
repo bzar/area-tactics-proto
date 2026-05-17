@@ -1,5 +1,6 @@
 import {
   Game,
+  Player,
   Unit,
   UnitType,
   UnitId,
@@ -26,8 +27,45 @@ export interface GameProcessorError {
   message: string;
 }
 
+export interface AttackForecast {
+  attackerId: UnitId;
+  attackerPlayerId: number;
+  targetId: UnitId;
+  targetPlayerId: number;
+  damageType: DamageType;
+  power: number;
+  damageToEnergy: number;
+  damageToCondition: number;
+  destroysTarget: boolean;
+}
+
+export interface UnitDamagePreview {
+  damageToEnergy: number;
+  damageToCondition: number;
+  destroysTarget: boolean;
+}
+
 function unitRef(unit: Unit): UnitRef {
   return { unitId: unit.id, playerId: unit.playerId, typeId: unit.typeId };
+}
+
+function cloneGame(game: Game): Game {
+  const players = new Map<number, Player>();
+  game.players.forEach((player, id) => {
+    const units = new Map<UnitId, Unit>();
+    player.units.forEach((unit, uid) => units.set(uid, { ...unit }));
+    players.set(id, { ...player, units });
+  });
+  return { ...game, players };
+}
+
+function upcomingPlayerOrder(game: Game): number[] {
+  const playerIds = Array.from(game.players.keys())
+    .filter((id) => !game.players.get(id)?.eliminated)
+    .sort((a, b) => a - b);
+  const currentIndex = playerIds.indexOf(game.currentPlayerId);
+  if (currentIndex < 0) return playerIds;
+  return [...playerIds.slice(currentIndex + 1), ...playerIds.slice(0, currentIndex + 1)];
 }
 
 export class GameProcessor {
@@ -502,6 +540,76 @@ export class GameProcessor {
     });
   }
 
+  private buildAttackForecastsForPlayer(activePlayerId: number): AttackForecast[] {
+    const activePlayer = this.game.players.get(activePlayerId);
+    if (!activePlayer) return [];
+
+    const forecasts: AttackForecast[] = [];
+
+    activePlayer.units.forEach((attacker) => {
+      if (attacker.underConstruction) return;
+
+      const unitType = this.unitTypes.get(attacker.typeId);
+      if (!unitType || unitType.power === 0) return;
+
+      const influencedIds = this.influences.getUnitsInfluencedBy(attacker.id);
+      const targets: Unit[] = [];
+      this.game.players.forEach((player) => {
+        if (player.id === activePlayerId) return;
+        influencedIds.forEach((targetId) => {
+          const target = player.units.get(targetId);
+          if (target && !target.underConstruction) targets.push(target);
+        });
+      });
+
+      if (targets.length === 0) return;
+
+      const isMulti = targets.length > 1;
+      targets.forEach((target) => {
+        const flanking = this.features.flanking && this.isFlanking(attacker, target);
+        const damageType =
+          isMulti && flanking
+            ? DamageType.SplitAndFlanked
+            : isMulti
+              ? DamageType.Split
+              : flanking
+                ? DamageType.Flanked
+                : DamageType.Normal;
+        const power =
+          damageType === DamageType.SplitAndFlanked
+            ? unitType.power
+            : damageType === DamageType.Split
+              ? Math.floor(unitType.power / 2)
+              : damageType === DamageType.Flanked
+                ? Math.floor((unitType.power * 3) / 2)
+                : unitType.power;
+
+        const damageToEnergy = Math.min(power, target.energy);
+        const damageToCondition = power - damageToEnergy;
+        target.energy -= damageToEnergy;
+        target.condition -= damageToCondition;
+
+        forecasts.push({
+          attackerId: attacker.id,
+          attackerPlayerId: attacker.playerId,
+          targetId: target.id,
+          targetPlayerId: target.playerId,
+          damageType,
+          power,
+          damageToEnergy,
+          damageToCondition,
+          destroysTarget: target.condition <= 0,
+        });
+
+        if (target.condition <= 0) {
+          this.game.players.get(target.playerId)?.units.delete(target.id);
+        }
+      });
+    });
+
+    return forecasts;
+  }
+
   getSupportedTiles(playerId: number): Set<string> {
     if (!this.features.support) return new Set();
     return this.calculateSupportedTiles(playerId);
@@ -639,6 +747,52 @@ export class GameProcessor {
 
   getFeatures(): GameFeatures {
     return this.features;
+  }
+
+  getAttackForecasts(): AttackForecast[] {
+    const forecasts: AttackForecast[] = [];
+    Array.from(this.game.players.keys())
+      .filter((id) => !this.game.players.get(id)?.eliminated)
+      .sort((a, b) => a - b)
+      .forEach((playerId) => {
+        const sim = new GameProcessor(cloneGame(this.game), this.unitTypes, this.features);
+        forecasts.push(...sim.buildAttackForecastsForPlayer(playerId));
+      });
+    return forecasts;
+  }
+
+  getUnitDamagePreviews(): Map<UnitId, UnitDamagePreview> {
+    const initialStats = new Map<UnitId, { energy: number; condition: number }>();
+    this.game.players.forEach((player) => {
+      player.units.forEach((unit) => {
+        initialStats.set(unit.id, { energy: unit.energy, condition: unit.condition });
+      });
+    });
+
+    const sim = new GameProcessor(cloneGame(this.game), this.unitTypes, this.features);
+    const previews = new Map<UnitId, UnitDamagePreview>();
+
+    for (const activePlayerId of upcomingPlayerOrder(sim.game)) {
+      if (activePlayerId === sim.game.currentPlayerId) break;
+      sim.buildAttackForecastsForPlayer(activePlayerId);
+    }
+
+    initialStats.forEach(({ energy, condition }, unitId) => {
+      let finalUnit: Unit | undefined;
+      sim.game.players.forEach((player) => {
+        if (!finalUnit) finalUnit = player.units.get(unitId);
+      });
+
+      const finalEnergy = finalUnit?.energy ?? 0;
+      const finalCondition = finalUnit?.condition ?? 0;
+      previews.set(unitId, {
+        damageToEnergy: energy - finalEnergy,
+        damageToCondition: condition - finalCondition,
+        destroysTarget: !finalUnit || finalCondition <= 0,
+      });
+    });
+
+    return previews;
   }
 
   getInfluences(): InfluenceMap {
