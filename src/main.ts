@@ -205,9 +205,13 @@ world.addChild(labelLayer);
 const labelPool: PIXI.Text[] = [];
 function getLabel(text: string, size: number): PIXI.Text {
   const t = labelPool.pop() ?? new PIXI.Text("", { fill: 0xffffff, fontWeight: "bold" });
+  const style = t.style as PIXI.TextStyle;
   t.text = text;
-  (t.style as PIXI.TextStyle).fontSize = size;
+  style.fontSize = size;
+  style.fill = 0xffffff;
+  style.strokeThickness = 0;
   t.anchor.set(0.5, 0.5);
+  t.alpha = 1;
   return t;
 }
 
